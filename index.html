@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>교구지도</title>
 <style>
 :root{
@@ -31,7 +34,7 @@ header{flex-shrink:0;background:var(--d);border-bottom:none;z-index:30;padding:0
 
 /* ── 탭 영역 (기도문 스타일) ── */
 .tab-bar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;
-  height:52px;background:var(--bg);border-bottom:1px solid var(--bdr);
+  height:52px;background:var(--card);border-top:1px solid var(--bdr);border-bottom:2px solid var(--bdr);
   overflow-x:auto;scrollbar-width:none;}
 .tab-bar::-webkit-scrollbar{display:none;}
 .tab{flex:0 0 auto;height:38px;padding:0 16px;border-radius:10px;
@@ -133,8 +136,8 @@ header{flex-shrink:0;background:var(--d);border-bottom:none;z-index:30;padding:0
 /* 관구 섹션 헤더 */
 .lv-sec{display:flex;align-items:center;gap:10px;margin:18px 0 10px;}
 .lv-sec:first-child{margin-top:4px;}
-.lv-sec-bdg{font-size:13px;font-weight:800;padding:5px 14px;border-radius:20px;color:#fff;flex-shrink:0;}
-.lv-sec-cnt{font-size:14px;color:var(--sub);}
+.lv-sec-bdg{font-size:15px;font-weight:800;padding:7px 20px;border-radius:20px;color:#fff;flex-shrink:0;min-width:100px;text-align:center;}
+.lv-sec-cnt{font-size:14px;color:var(--sub);font-weight:500;}
 /* 카드 */
 .lv-card{background:var(--card);border-radius:var(--r);border:1px solid var(--bdr);
   box-shadow:0 1px 8px rgba(0,0,0,.06);margin-bottom:12px;overflow:hidden;cursor:pointer;
@@ -150,6 +153,7 @@ header{flex-shrink:0;background:var(--d);border-bottom:none;z-index:30;padding:0
 .lv-info{flex:1;min-width:0;}
 .lv-name{font-size:17px;font-weight:700;color:var(--tx);word-break:keep-all;line-height:1.35;margin-bottom:4px;}
 .lv-rg{font-size:13px;color:var(--sub);line-height:1.4;}
+.lv-det{font-size:11px;color:var(--dim);margin-top:3px;line-height:1.5;word-break:keep-all;}
 /* foot: URL */
 .lv-foot{border-top:1px solid #EDE8E2;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;background:#FAF8F4;}
 .lv-url{font-size:12px;color:var(--d);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
@@ -467,6 +471,16 @@ const DIOCESE_META =
     "region": "제주도 전지역",
     "detail": [
       "제주도 전지역 (제주·서귀포)"
+    ]
+  },
+  "군종교구": {
+    "color": "#4A5568",
+    "gwangu": "군종교구",
+    "parishes": 0,
+    "url": "https://www.gunjong.or.kr/",
+    "region": "육·해·공군 전체",
+    "detail": [
+      "육·해·공군에서 국군장병들을 위하여 사목"
     ]
   }
 };
@@ -1057,19 +1071,22 @@ const GW_OF={
   '원주교구':'서울관구','춘천교구':'서울관구','대전교구':'서울관구',
   '대구대교구':'대구관구','청주교구':'대구관구','안동교구':'대구관구',
   '마산교구':'대구관구','부산교구':'대구관구',
-  '광주대교구':'광주관구','전주교구':'광주관구','제주교구':'광주관구'
+  '광주대교구':'광주관구','전주교구':'광주관구','제주교구':'광주관구',
+  '군종교구':'군종교구'
 };
 const DIOCESE_ICO={
   '서울대교구':'✝️','인천교구':'⛵','수원교구':'🙏','의정부교구':'🌿',
   '원주교구':'🍃','춘천교구':'🌾','대전교구':'☘️',
   '대구대교구':'⛰️','청주교구':'🌊','안동교구':'🍂','마산교구':'🌱','부산교구':'🌊',
-  '광주대교구':'💜','전주교구':'🌿','제주교구':'🌸'
+  '광주대교구':'💜','전주교구':'🌿','제주교구':'🌸',
+  '군종교구':'🎖️'
 };
 function buildListView(){
   const gws=[
     {key:'서울관구',col:'#1a6bb5',dioceses:['서울대교구','인천교구','수원교구','의정부교구','원주교구','춘천교구','대전교구']},
     {key:'대구관구',col:'#c05a00',dioceses:['대구대교구','청주교구','안동교구','마산교구','부산교구']},
     {key:'광주관구',col:'#7a1fa2',dioceses:['광주대교구','전주교구','제주교구']},
+    {key:'군종교구',col:'#4A5568',dioceses:['군종교구']},
   ];
   const wrap=document.getElementById('list-content');
   wrap.innerHTML='';
@@ -1094,8 +1111,8 @@ function buildListView(){
       // top: 뱃지(대교구/교구) + 오른쪽 "천주교 XX교구"
       const top=document.createElement('div');top.className='lv-top';
       const bdg=document.createElement('span');bdg.className='lv-bdg';
-      bdg.style.background='#C42B2B';
-      bdg.textContent=isArchdiocese?'대교구':'교구';
+      bdg.style.background=g.col;
+      bdg.textContent=g.key;
       const op=document.createElement('span');op.className='lv-op';
       op.textContent='천주교 '+dName;
       top.appendChild(bdg);top.appendChild(op);
@@ -1109,6 +1126,11 @@ function buildListView(){
       const rg=document.createElement('div');rg.className='lv-rg';
       rg.innerHTML='📍 '+m.region;
       info.appendChild(nm);info.appendChild(rg);
+      const dets2=(m.detail||[]).filter(function(x){return x.trim()!==m.region.trim();});
+      if(dets2.length){
+        const dt=document.createElement('div');dt.className='lv-det';
+        dt.textContent=dets2.join(' / ');info.appendChild(dt);
+      }
       body.appendChild(ico);body.appendChild(info);
 
       // foot: URL
@@ -1161,7 +1183,7 @@ document.querySelectorAll('.tab').forEach(function(t){
       document.querySelector('.gb-all').classList.add('on');
       document.querySelector('.gb-all').style.background='#555';
     }
-    if(tab==='list'){buildListView();}
+    if(tab==='list' && !document.getElementById('list-content').hasChildNodes()){buildListView();}
     hideCard();
   });
 });
@@ -1358,33 +1380,42 @@ document.getElementById('card').addEventListener('click',function(e){if(e.target
 
 
 function makeRow(disp,diocese){
-  const m=DIOCESE_META[diocese];if(!m)return null;
+  const m=DIOCESE_META[diocese];if(!m)return document.createElement('div');
   const url=m.url||'';
-  const div=document.createElement('div');
-  div.className='si-r';
-  // top: 관구 뱃지 + 지역
-  const top=document.createElement('div');top.className='si-r-top';
-  const bdg=document.createElement('span');bdg.className='sl';
-  bdg.style.background=m.color;bdg.textContent=GW_OF[diocese]||'';
-  const op=document.createElement('span');op.className='si-r-op';op.textContent=m.region;
+  const isArch=diocese.includes('대교구');
+  const gwKey=GW_OF[diocese]||m.gwangu||'';
+  const gwCol={'서울관구':'#1a6bb5','대구관구':'#c05a00','광주관구':'#7a1fa2','군종교구':'#4A5568'}[gwKey]||'#888';
+  const card=document.createElement('div');card.className='lv-card';
+  // top
+  const top=document.createElement('div');top.className='lv-top';
+  const bdg=document.createElement('span');bdg.className='lv-bdg';
+  bdg.style.background=gwCol;bdg.textContent=gwKey;
+  const op=document.createElement('span');op.className='lv-op';op.textContent='천주교 '+diocese;
   top.appendChild(bdg);top.appendChild(op);
-  // body: 점 + 교구명 + 지역
-  const body=document.createElement('div');body.className='srow';
-  const dot=document.createElement('span');dot.className='sdot';dot.style.background=m.color;
-  const info=document.createElement('div');info.className='srow-info';
-  const nm=document.createElement('div');nm.className='sd';nm.textContent=diocese;
-  const rg=document.createElement('div');rg.className='sg';rg.textContent=disp;
+  // body
+  const body=document.createElement('div');body.className='lv-body';
+  const ico=document.createElement('div');ico.className='lv-ico';
+  ico.textContent=DIOCESE_ICO[diocese]||'⛪';
+  const info=document.createElement('div');info.className='lv-info';
+  const nm=document.createElement('div');nm.className='lv-name';nm.textContent=diocese;
+  const rg=document.createElement('div');rg.className='lv-rg';rg.innerHTML='📍 '+(disp||m.region);
   info.appendChild(nm);info.appendChild(rg);
-  body.appendChild(dot);body.appendChild(info);
-  // foot: URL
-  const foot=document.createElement('div');foot.className='si-r-foot';
-  const urlEl=document.createElement('span');urlEl.className='si-r-url';
+  // 세부지역
+  const dets=(m.detail||[]).filter(function(x){return x.trim()!==(m.region||'').trim();});
+  if(dets.length){
+    const dt=document.createElement('div');dt.className='lv-det';
+    dt.textContent=dets.join(' / ');info.appendChild(dt);
+  }
+  body.appendChild(ico);body.appendChild(info);
+  // foot
+  const foot=document.createElement('div');foot.className='lv-foot';
+  const urlEl=document.createElement('span');urlEl.className='lv-url';
   urlEl.textContent=url?url.replace(/^https?:\/\//,'').replace(/\/$/,''):'홈페이지 없음';
-  const arr=document.createElement('span');arr.className='si-r-arr';arr.textContent='›';
+  const arr=document.createElement('span');arr.className='lv-arr';arr.textContent='›';
   foot.appendChild(urlEl);foot.appendChild(arr);
-  div.appendChild(top);div.appendChild(body);div.appendChild(foot);
-  if(url){div.addEventListener('click',function(){location.href=url;});}
-  return div;
+  card.appendChild(top);card.appendChild(body);card.appendChild(foot);
+  if(url){card.addEventListener('click',function(){location.href=url;});}
+  return card;
 }
 
 function doSearch(){
@@ -1397,12 +1428,14 @@ function doSearch(){
   for(const [city,aliases] of Object.entries(REGION_OVERLAP_PLAIN)){
     if(aliases.map(a=>a.replace(/\s+/g,'')).includes(q)){
       const sm=OVERLAP_SUMMARY[city]||{};
-      let h=`<div class="sob"><div class="sot">⚠️ <strong>"${city}"</strong>는 중복 지역 - 아래에서 세부 지역 확인하세요</div>`;
-      Object.entries(sm).forEach(([d,dongs])=>{
-        const m=DIOCESE_META[d];
-        h+=`<div class="sog"><div class="sod" style="color:${m?.color||'#333'}">${d} (${m?.gwangu||''})</div><div class="sodd">${dongs.join(' · ')}</div></div>`;
+      res.innerHTML='';
+      const warn=document.createElement('div');warn.className='sob';
+      warn.innerHTML=`<div class="sot">⚠️ <strong>"${city}"</strong>는 중복 지역입니다<br>해당 교구를 확인하세요</div>`;
+      res.appendChild(warn);
+      Object.keys(sm).forEach(function(d){
+        if(DIOCESE_META[d]) res.appendChild(makeRow(city,d));
       });
-      res.innerHTML=h+'</div>';return;
+      return;
     }
   }
 
@@ -1410,27 +1443,30 @@ function doSearch(){
   for(const [city,groups] of Object.entries(NAME_SAME)){
     if(city==='광주'){
       if(groups.gwangyeok.map(a=>a.replace(/\s+/g,'')).includes(q)){
-        res.innerHTML=makeRow('광주광역시','광주대교구');return;
+        res.innerHTML='';res.appendChild(makeRow('광주광역시','광주대교구'));return;
       }
       if(groups.gyeonggi.map(a=>a.replace(/\s+/g,'')).includes(q)){
-        res.innerHTML=makeRow('경기 광주','수원교구');return;
+        res.innerHTML='';res.appendChild(makeRow('경기 광주','수원교구'));return;
       }
     } else if(city==='고성'){
       if(groups.gangwon.map(a=>a.replace(/\s+/g,'')).includes(q)){
-        res.innerHTML=makeRow('강원 고성','춘천교구');return;
+        res.innerHTML='';res.appendChild(makeRow('강원 고성','춘천교구'));return;
       }
       if(groups.gyeongnam.map(a=>a.replace(/\s+/g,'')).includes(q)){
-        res.innerHTML=makeRow('경남 고성','마산교구');return;
+        res.innerHTML='';res.appendChild(makeRow('경남 고성','마산교구'));return;
       }
     }
     if(groups.plain.map(a=>a.replace(/\s+/g,'')).includes(q)){
       let rows='';
+      res.innerHTML='';
       if(city==='광주'){
-        rows=makeRow('광주광역시','광주대교구')+makeRow('경기 광주','수원교구');
+        res.appendChild(makeRow('광주광역시','광주대교구'));
+        res.appendChild(makeRow('경기 광주','수원교구'));
       } else if(city==='고성'){
-        rows=makeRow('강원 고성','춘천교구')+makeRow('경남 고성','마산교구');
+        res.appendChild(makeRow('강원 고성','춘천교구'));
+        res.appendChild(makeRow('경남 고성','마산교구'));
       }
-      res.innerHTML=rows;return;
+      return;
     }
   }
 
@@ -1450,11 +1486,12 @@ function doSearch(){
   if(!results.length){res.innerHTML=`<div class="se">"${raw}"을 찾을 수 없습니다</div>`;return;}
   const seen=new Set();
   const u=results.filter(i=>{const k=i.k+'|'+i.d;if(seen.has(k))return false;seen.add(k);return true;});
-  res.innerHTML=u.slice(0,20).map(i=>{
-    const m=DIOCESE_META[i.d];if(!m)return'';
-    const disp=i.display||i.k;
-    return`<div class="si-r"><div class="sl">${disp}</div><div class="srow"><div class="sdot" style="background:${m.color}"></div><div><div class="sd" style="color:${m.color}">${i.d}</div><div class="sg">${i.g}</div></div></div></div>`;
-  }).join('')+(u.length>20?'<div class="se" style="font-size:11px;padding:10px 0">상위 20건만 표시</div>':'');
+  res.innerHTML='';
+  u.slice(0,20).forEach(function(i){
+    const m=DIOCESE_META[i.d];if(!m)return;
+    res.appendChild(makeRow(i.display||i.k, i.d));
+  });
+  if(u.length>20){const more=document.createElement('div');more.className='se';more.style.fontSize='11px';more.style.padding='10px 0';more.textContent='상위 20건만 표시';res.appendChild(more);}
 }
 document.getElementById('si').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
 
@@ -1535,7 +1572,7 @@ window.addEventListener('pageshow',function(){
     },{passive:true});
   }
   window.addEventListener('load',function(){
-    makePTR('list-view',function(){buildListView();});
+    makePTR('list-view',function(){document.getElementById('list-content').innerHTML='';buildListView();});
     makePTR('search-view',function(){document.getElementById('si').value='';document.getElementById('sres').innerHTML='';});
   });
 })();
