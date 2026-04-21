@@ -46,7 +46,8 @@ header{flex-shrink:0;background:var(--d);border-bottom:none;z-index:30;padding:0
 
 /* ── 뷰 컨테이너 ── */
 #main{flex:1;overflow:hidden;min-height:0;position:relative;background:var(--bg);}
-#map-view{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);}
+#map-view{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:var(--bg);}
+#map-view.on{display:flex;}
 #map-svg{width:100%;height:100%;cursor:grab;display:block;touch-action:none;position:absolute;top:0;left:0;}
 #map-svg:active{cursor:grabbing;}
 .dp{cursor:pointer;}
@@ -180,7 +181,7 @@ header{flex-shrink:0;background:var(--d);border-bottom:none;z-index:30;padding:0
   <div class="tab" data-tab="search">🔍 지역 검색</div>
 </div>
 <div id="main">
-  <div id="map-view">
+  <div id="map-view" class="on">
     <svg id="map-svg" viewBox="55 130 380 600" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
       <g id="map-g">
         <!-- 교구 면 채색: stroke none, 내부 일체 선 없음 -->
@@ -372,8 +373,7 @@ document.querySelectorAll('.tab').forEach(function(t){
     document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});
     t.classList.add('on');
     const tab=t.dataset.tab;
-    document.getElementById('map-view').style.visibility=tab==='gwangu'?'visible':'hidden';
-    document.getElementById('map-view').style.pointerEvents=tab==='gwangu'?'auto':'none';
+    document.getElementById('map-view').classList.toggle('on',tab==='gwangu');
     document.getElementById('search-view').classList.toggle('on',tab==='search');
     document.getElementById('list-view').classList.toggle('on',tab==='list');
     if(tab==='list'){
@@ -726,7 +726,7 @@ window.addEventListener('pageshow',function(){
       if(!sMoving)return;
       var dx=e.changedTouches[0].clientX-sx;
       if(Math.abs(dx)<THRESHOLD)return;
-      var cur=document.querySelector('.tab.on');
+      var cur=document.querySelector('[data-tab].on');
       if(!cur)return;
       var idx=SWIPE_TABS.indexOf(cur.dataset.tab);
       if(idx<0)return;
