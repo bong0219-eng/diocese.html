@@ -6,8 +6,8 @@
 <title>교구지도</title>
 <style>
 :root{
-  --d:#2BBFA8;            /* 강조 틸녹색 */
-  --d-lt:#E2F7F4;         /* 연한 틸 */
+  --d:#1F2A44;            /* 헤더/탭 강조 네이비 */
+  --d-lt:#E8EBF0;         /* 연한 네이비 */
   --bg:#EDE8E0;           /* 전체 배경 (기도문 동일) */
   --card:#FFFBF2;         /* 카드 */
   --card-sub:#F5F0E8;     /* 서브 서피스 */
@@ -41,7 +41,7 @@ header{flex-shrink:0;background:var(--d);border-bottom:1px solid rgba(0,0,0,.08)
   display:flex;align-items:center;gap:5px;letter-spacing:-.02em;
   transition:opacity .15s,transform .12s,box-shadow .15s;}
 .tab.on{background:var(--d);color:#fff;border-color:transparent;font-weight:700;
-  box-shadow:0 2px 8px rgba(43,191,168,.30);}
+  box-shadow:0 2px 8px rgba(31,42,68,.28);}
 .tab:active{transform:scale(.97);}
 
 /* ── 뷰 컨테이너 ── */
@@ -127,31 +127,32 @@ header{flex-shrink:0;background:var(--d);border-bottom:1px solid rgba(0,0,0,.08)
 .sodd{font-size:12px;color:#555;line-height:1.7;}
 
 /* ── 목록 뷰 ── */
-#list-view{position:absolute;inset:0;overflow-y:auto;padding:14px 13px 40px;display:none;background:var(--bg);}
+#list-view{position:absolute;inset:0;overflow-y:auto;padding:14px 14px 60px;display:none;background:var(--bg);}
 #list-view.on{display:block;}
-.lv-gw{margin-bottom:24px;}
-.lv-gw-title{font-size:11px;font-weight:700;letter-spacing:.8px;
-  padding:0 4px 8px;color:var(--dim);margin-bottom:6px;border-bottom:1px solid var(--bdr);}
-/* 카드 — 기도문 .card 구조 */
+/* 관구 섹션 헤더 */
+.lv-sec{display:flex;align-items:center;gap:10px;margin:18px 0 10px;}
+.lv-sec:first-child{margin-top:4px;}
+.lv-sec-bdg{font-size:13px;font-weight:800;padding:5px 14px;border-radius:20px;color:#fff;flex-shrink:0;}
+.lv-sec-cnt{font-size:14px;color:var(--sub);}
+/* 카드 */
 .lv-card{background:var(--card);border-radius:var(--r);border:1px solid var(--bdr);
-  box-shadow:0 1px 8px rgba(0,0,0,.06);margin-bottom:10px;overflow:hidden;cursor:pointer;
+  box-shadow:0 1px 8px rgba(0,0,0,.06);margin-bottom:12px;overflow:hidden;cursor:pointer;
   transition:transform .12s,box-shadow .12s;}
 .lv-card:active{transform:scale(.983);box-shadow:none;}
-.lv-cr1{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 0;gap:8px;}
+/* top: 뱃지 + 교구전체명 */
+.lv-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 0;gap:8px;}
 .lv-bdg{font-size:12px;font-weight:800;padding:4px 10px;border-radius:6px;color:#fff;white-space:nowrap;flex-shrink:0;}
-.lv-creg{font-size:11px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.lv-cr2{display:flex;align-items:center;gap:12px;padding:9px 14px 10px;}
-.lv-ico{width:44px;height:44px;flex-shrink:0;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--card-sub);}
+.lv-op{font-size:11.5px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* body: 아이콘 + 정보 */
+.lv-body{display:flex;align-items:center;gap:12px;padding:9px 14px 10px;}
+.lv-ico{width:54px;height:54px;flex-shrink:0;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--card-sub);}
 .lv-info{flex:1;min-width:0;}
-.lv-name{font-size:16px;font-weight:700;color:var(--tx);word-break:keep-all;line-height:1.38;margin-bottom:3px;}
-.lv-detail{font-size:12px;color:var(--sub);line-height:1.55;word-break:keep-all;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-.lv-parishes-wrap{text-align:right;flex-shrink:0;}
-.lv-parishes{font-size:22px;font-weight:800;color:var(--d);line-height:1;}
-.lv-parishes span{font-size:10px;font-weight:500;color:var(--sub);display:block;margin-top:2px;}
-.lv-cfoot{border-top:1px solid #EDE8E2;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;background:#FAF8F4;}
-.lv-curl{font-size:11px;color:var(--d);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
-.lv-carr{font-size:15px;color:var(--dim);flex-shrink:0;margin-left:6px;}
+.lv-name{font-size:17px;font-weight:700;color:var(--tx);word-break:keep-all;line-height:1.35;margin-bottom:4px;}
+.lv-rg{font-size:13px;color:var(--sub);line-height:1.4;}
+/* foot: URL */
+.lv-foot{border-top:1px solid #EDE8E2;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;background:#FAF8F4;}
+.lv-url{font-size:12px;color:var(--d);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;}
+.lv-arr{font-size:15px;color:var(--dim);flex-shrink:0;margin-left:6px;}
 
 /* ── PTR (당겨서 새로고침) ── */
 #ptr{position:absolute;top:-48px;left:0;right:0;height:48px;
@@ -308,47 +309,60 @@ function buildListView(){
     {key:'대구관구',col:'#c05a00',dioceses:['대구대교구','청주교구','안동교구','마산교구','부산교구']},
     {key:'광주관구',col:'#7a1fa2',dioceses:['광주대교구','전주교구','제주교구']},
   ];
-  const wrap=document.getElementById('list-content');wrap.innerHTML='';
+  const wrap=document.getElementById('list-content');
+  wrap.innerHTML='';
   gws.forEach(function(g){
-    const gwDiv=document.createElement('div');gwDiv.className='lv-gw';
-    const gwTtl=document.createElement('div');gwTtl.className='lv-gw-title';
-    gwTtl.textContent=g.key.replace('관구','') + ' 관구';
-    gwDiv.appendChild(gwTtl);
+    // ── 관구 섹션 헤더 ──
+    const sec=document.createElement('div');sec.className='lv-sec';
+    const secBdg=document.createElement('span');secBdg.className='lv-sec-bdg';
+    secBdg.style.background=g.col;secBdg.textContent=g.key;
+    const secCnt=document.createElement('span');secCnt.className='lv-sec-cnt';
+    secCnt.textContent=g.dioceses.length+'개 교구';
+    sec.appendChild(secBdg);sec.appendChild(secCnt);
+    wrap.appendChild(sec);
+    // ── 교구 카드 ──
     g.dioceses.forEach(function(dName){
       const m=DIOCESE_META[dName];if(!m)return;
+      const isArchdiocese=dName.includes('대교구');
       const dets=(m.detail||[]).filter(function(x){return x.trim()!==m.region.trim();});
-      const detTxt=dets.join(' / ');
+      const regionFull=m.region+(dets.length?'·'+dets.join('·'):'');
+
       const card=document.createElement('div');card.className='lv-card';
-      // row1: 뱃지 + 지역
-      const r1=document.createElement('div');r1.className='lv-cr1';
-      const bdg=document.createElement('span');bdg.className='lv-bdg';bdg.style.background=m.color;bdg.textContent=g.key;
-      const reg=document.createElement('span');reg.className='lv-creg';reg.innerHTML='📍&nbsp;'+m.region;
-      r1.appendChild(bdg);r1.appendChild(reg);
-      // row2: 아이콘 + 정보 + 본당수
-      const r2=document.createElement('div');r2.className='lv-cr2';
-      const ico=document.createElement('div');ico.className='lv-ico';ico.textContent=DIOCESE_ICO[dName]||'✝';
-      const inf=document.createElement('div');inf.className='lv-info';
-      const nm=document.createElement('div');nm.className='lv-name';nm.textContent=dName;inf.appendChild(nm);
-      if(detTxt){const dt=document.createElement('div');dt.className='lv-detail';dt.textContent=detTxt;inf.appendChild(dt);}
-      const pw=document.createElement('div');pw.className='lv-parishes-wrap';
-      const pn=document.createElement('div');pn.className='lv-parishes';
-      const ps=document.createElement('span');ps.textContent='본당';
-      pn.textContent=m.parishes;pn.appendChild(ps);pw.appendChild(pn);
-      r2.appendChild(ico);r2.appendChild(inf);r2.appendChild(pw);
-      // row3: 푸터
-      const ft=document.createElement('div');ft.className='lv-cfoot';
-      const cu=document.createElement('span');cu.className='lv-curl';
-      cu.textContent=m.url?m.url.replace(/^https?:\/\//,'').replace(/\/$/,''):'홈페이지 없음';
-      const ca=document.createElement('span');ca.className='lv-carr';ca.textContent='›';
-      ft.appendChild(cu);ft.appendChild(ca);
-      card.appendChild(r1);card.appendChild(r2);card.appendChild(ft);
+
+      // top: 뱃지(대교구/교구) + 오른쪽 "천주교 XX교구"
+      const top=document.createElement('div');top.className='lv-top';
+      const bdg=document.createElement('span');bdg.className='lv-bdg';
+      bdg.style.background='#C42B2B';
+      bdg.textContent=isArchdiocese?'대교구':'교구';
+      const op=document.createElement('span');op.className='lv-op';
+      op.textContent='천주교 '+dName;
+      top.appendChild(bdg);top.appendChild(op);
+
+      // body: 아이콘 + (교구명 + 지역)
+      const body=document.createElement('div');body.className='lv-body';
+      const ico=document.createElement('div');ico.className='lv-ico';
+      ico.textContent='⛪';
+      const info=document.createElement('div');info.className='lv-info';
+      const nm=document.createElement('div');nm.className='lv-name';nm.textContent=dName;
+      const rg=document.createElement('div');rg.className='lv-rg';
+      rg.innerHTML='📍 '+m.region;
+      info.appendChild(nm);info.appendChild(rg);
+      body.appendChild(ico);body.appendChild(info);
+
+      // foot: URL
+      const foot=document.createElement('div');foot.className='lv-foot';
+      const url=document.createElement('span');url.className='lv-url';
+      url.textContent=m.url?m.url.replace(/^https?:\/\//,'').replace(/\/$/,''):'홈페이지 없음';
+      const arr=document.createElement('span');arr.className='lv-arr';arr.textContent='›';
+      foot.appendChild(url);foot.appendChild(arr);
+
+      card.appendChild(top);card.appendChild(body);card.appendChild(foot);
       if(m.url){card.addEventListener('click',(function(u){return function(){
         sessionStorage.setItem('listScroll',document.getElementById('list-view').scrollTop);
         location.href=u;
       };})(m.url));}
-      gwDiv.appendChild(card);
+      wrap.appendChild(card);
     });
-    wrap.appendChild(gwDiv);
   });
 }
 
@@ -466,6 +480,7 @@ const GW_BOUNDS={
 const PADDING=18;
 
 function filterGw(btn){
+  vx=55;vy=130;vw=380;vh=600;setVB(); // 항상 초기 위치
   const gw=btn.dataset.gw;
   document.querySelectorAll('.gb').forEach(b=>{
     const on=b.dataset.gw===gw;b.classList.toggle('on',on);
