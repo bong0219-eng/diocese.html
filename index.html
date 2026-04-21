@@ -22,7 +22,7 @@ html,body{height:100%;overflow:hidden;}
 body{font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);display:flex;flex-direction:column;}
 
 /* ── 헤더 (기도문 스타일) ── */
-header{flex-shrink:0;background:var(--d);border-bottom:1px solid rgba(0,0,0,.08);z-index:30;padding:0 16px;height:56px;}
+header{flex-shrink:0;background:var(--d);border-bottom:none;z-index:30;padding:0 16px;height:56px;}
 .hd{display:flex;align-items:center;justify-content:space-between;height:100%;}
 .hd-left{display:flex;align-items:center;gap:9px;}
 .hd-icon{width:28px;height:28px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
@@ -30,10 +30,10 @@ header{flex-shrink:0;background:var(--d);border-bottom:1px solid rgba(0,0,0,.08)
 .hd-count{font-size:11px;font-weight:700;background:rgba(255,255,255,.2);color:#fff;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.3);}
 
 /* ── 탭 영역 (기도문 스타일) ── */
-.tabs{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;
+.tab-bar{flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;
   height:52px;background:var(--bg);border-bottom:1px solid var(--bdr);
   overflow-x:auto;scrollbar-width:none;}
-.tabs::-webkit-scrollbar{display:none;}
+.tab-bar::-webkit-scrollbar{display:none;}
 .tab{flex:0 0 auto;height:38px;padding:0 16px;border-radius:10px;
   border:1.5px solid var(--d);background:var(--card-sub);
   color:var(--d);font-size:15px;font-weight:600;
@@ -172,13 +172,13 @@ header{flex-shrink:0;background:var(--d);border-bottom:1px solid rgba(0,0,0,.08)
 </head>
 <body>
 <header>
-  <div class="hd"><div class="hd-left"><span class="hd-icon">⛪</span><h1>교구 지도</h1></div><span class="hd-count">3관구 · 15교구</span></div>
-  <div class="tabs">
-    <div class="tab on" data-tab="gwangu">관구별 보기</div>
-    <div class="tab" data-tab="list">📋 목록</div>
-    <div class="tab" data-tab="search">🔍 지역 검색</div>
-  </div>
+  <div class="hd"><div class="hd-left"><span class="hd-icon">⛪</span><h1>한국 천주교 교구 지도</h1></div><span class="hd-count">3관구 · 15교구</span></div>
 </header>
+<div class="tab-bar">
+  <div class="tab on" data-tab="gwangu">관구별 보기</div>
+  <div class="tab" data-tab="list">📋 목록</div>
+  <div class="tab" data-tab="search">🔍 지역 검색</div>
+</div>
 <div id="main">
   <div id="map-view">
     <svg id="map-svg" viewBox="55 130 380 600" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
@@ -422,22 +422,26 @@ window.addEventListener('mousemove',e=>{
   vx-=(e.clientX-px)*sx;vy-=(e.clientY-py)*sy;px=e.clientX;py=e.clientY;setVB();
 });
 window.addEventListener('mouseup',()=>{dragging=false;});
+// 카카오맵 스타일 휠 줌 (마우스 위치 기준, 부드럽게)
+let _zoomTarget=null, _zoomRAF=null;
+function _applyZoom(nw,nh,mx,my,rx,ry){
+  vw=Math.max(80,Math.min(1800,nw));
+  vh=Math.max(100,Math.min(2250,nh));
+  vx=mx-rx*vw; vy=my-ry*vh;
+  setVB();
+}
 svg.addEventListener('wheel',e=>{
   e.preventDefault();
   const rect=svg.getBoundingClientRect();
-  // 마우스가 가리키는 SVG 좌표 (줌 전)
-  const mx=(e.clientX-rect.left)/rect.width*vw+vx;
-  const my=(e.clientY-rect.top)/rect.height*vh+vy;
-  const f=e.deltaY>0?1.18:1/1.18;
-  const nw=Math.max(80,Math.min(1800,vw*f));
-  const nh=Math.max(100,Math.min(2250,vh*f));
-  // 줌 후에도 마우스 아래 같은 SVG 좌표가 오도록 vx,vy 재계산
   const rx=(e.clientX-rect.left)/rect.width;
   const ry=(e.clientY-rect.top)/rect.height;
-  vx=mx-rx*nw;
-  vy=my-ry*nh;
-  vw=nw; vh=nh;
-  setVB();
+  const mx=rx*vw+vx, my=ry*vh+vy;
+  // deltaY 누적해서 부드럽게
+  const delta=e.deltaY<0?-1:1; // -1=확대, 1=축소
+  const f=delta<0?0.82:1.22;   // 카카오맵 수준 배율
+  const nw=vw*f, nh=vh*f;
+  if(_zoomRAF)cancelAnimationFrame(_zoomRAF);
+  _zoomRAF=requestAnimationFrame(()=>{ _applyZoom(nw,nh,mx,my,rx,ry); _zoomRAF=null; });
 },{passive:false});
 let t0=null,t1=null;
 svg.addEventListener('touchstart',e=>{
