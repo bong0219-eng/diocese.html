@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1f2a44">
+<title>한국 천주교 관구·교구</title>
+<style>
+:root {
+  --navy:#1f2a44; --navy2:#2d3f5e;
+  --gold:#d4aa6a; --gold2:#b8965a;
+  --cream:#f5f0e8; --ink:#1F2937;
+  --line:#e4ddd5; --sub:#9CA3AF;
+  --seoul:#C0392B; --daegu:#1565C0; --gwangju:#1B7A3E; --gun:#6C3483;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;background:var(--cream);font-family:'Noto Sans KR','Apple SD Gothic Neo',sans-serif;overscroll-behavior:none}
+
+/* ── 헤더 ── */
+#hd{
+  position:sticky;top:0;z-index:100;
+  background:linear-gradient(135deg,#1f2a44,#2d3f5e);
+  padding:calc(14px + var(--safe-top)) 16px 13px;
+  display:flex;align-items:center;gap:12px;
+  box-shadow:0 4px 18px rgba(18,24,38,.22);
+}
+#hd-ico{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+#hd-txt{min-width:0;}
+#hd-title{font-size:18px;font-weight:900;color:#fff;letter-spacing:-.02em;line-height:1.2;}
+#hd-sub{font-size:11px;color:rgba(255,255,255,.62);margin-top:2px;}
+#back-btn{
+  margin-left:auto;flex-shrink:0;
+  width:34px;height:34px;border-radius:50%;border:none;
+  background:rgba(255,255,255,.13);color:rgba(255,255,255,.85);
+  font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+#back-btn:active{background:rgba(255,255,255,.22);}
+
+/* ── 탭 ── */
+#tab-bar{
+  display:flex;gap:7px;padding:11px 13px 9px;
+  background:rgba(255,250,243,.92);border-bottom:1px solid var(--line);
+  overflow-x:auto;scrollbar-width:none;
+  position:sticky;top:calc(67px + var(--safe-top));z-index:90;
+  backdrop-filter:blur(10px);
+}
+#tab-bar::-webkit-scrollbar{display:none;}
+.tab{
+  flex-shrink:0;padding:8px 16px;border-radius:999px;
+  border:1.5px solid var(--line);background:#fff;
+  color:#64748b;font-size:13px;font-weight:800;
+  font-family:inherit;cursor:pointer;white-space:nowrap;
+  transition:background .14s,color .14s,border-color .14s;
+}
+.tab.on{color:#fff;border-color:transparent;}
+.tab[data-gw="all"].on{background:var(--navy);}
+.tab[data-gw="seoul"].on{background:var(--seoul);}
+.tab[data-gw="daegu"].on{background:var(--daegu);}
+.tab[data-gw="gwangju"].on{background:var(--gwangju);}
+.tab[data-gw="gun"].on{background:var(--gun);}
+
+/* ── 목록 ── */
+#list{
+  padding:12px 12px calc(28px + var(--safe-bot));
+  display:flex;flex-direction:column;gap:0;
+}
+
+/* ── 관구 헤더 ── */
+.gw-hd{
+  display:flex;align-items:center;gap:10px;
+  padding:18px 4px 10px;
+}
+.gw-badge{
+  font-size:12px;font-weight:900;padding:5px 13px;
+  border-radius:999px;color:#fff;white-space:nowrap;
+}
+.gw-count{font-size:11px;color:var(--sub);font-weight:700;}
+
+/* ── 교구 카드 (웹카드 스타일과 통일) ── */
+.card{
+  display:block;width:100%;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 2px 10px rgba(14,21,53,.07);
+  margin-bottom:9px;
+  cursor:pointer;
+  text-decoration:none;
+  transition:transform .12s,box-shadow .12s;
+  overflow:hidden;
+}
+.card:active{transform:scale(.988);box-shadow:0 1px 4px rgba(14,21,53,.04);}
+
+.card-top{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;padding:13px 14px 0;
+}
+.card-badge{
+  font-size:12px;font-weight:900;padding:4px 11px;
+  border-radius:999px;color:#fff;white-space:nowrap;flex-shrink:0;
+}
+.card-type{font-size:11px;color:var(--sub);font-weight:600;white-space:nowrap;}
+
+.card-body{
+  display:flex;align-items:center;gap:13px;
+  padding:11px 14px 13px;
+}
+.card-ico{
+  width:44px;height:44px;flex-shrink:0;
+  border-radius:13px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;
+}
+.card-info{flex:1;min-width:0;}
+.card-name{
+  font-size:16px;font-weight:800;color:var(--ink);
+  line-height:1.25;letter-spacing:-.02em;margin-bottom:3px;
+  word-break:keep-all;
+}
+.card-region{font-size:12px;color:var(--sub);font-weight:500;}
+
+.card-foot{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 14px;
+  background:#faf6f0;border-top:1px solid var(--line);
+}
+.card-url{
+  font-size:12px;font-weight:700;color:#C0392B;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;
+}
+.card-arrow{font-size:18px;color:var(--sub);flex-shrink:0;margin-left:6px;}
+
+/* ── 색상 테마 ── */
+.seoul .card-badge,.seoul .gw-badge{background:var(--seoul);}
+.seoul .card-ico{background:#fdf0f0;}
+.seoul .card-url{color:var(--seoul);}
+.daegu .card-badge,.daegu .gw-badge{background:var(--daegu);}
+.daegu .card-ico{background:#eef4fd;}
+.daegu .card-url{color:var(--daegu);}
+.gwangju .card-badge,.gwangju .gw-badge{background:var(--gwangju);}
+.gwangju .card-ico{background:#eef7f2;}
+.gwangju .card-url{color:var(--gwangju);}
+.gun .card-badge,.gun .gw-badge{background:var(--gun);}
+.gun .card-ico{background:#f5f0fd;}
+.gun .card-url{color:var(--gun);}
+
+/* ── 숨김 ── */
+.gw-section{display:none;}
+.gw-section.show{display:block;}
+
+/* ── 빈 상태 ── */
+#empty{
+  display:none;flex-direction:column;align-items:center;
+  justify-content:center;padding:60px 20px;gap:10px;
+  color:var(--sub);font-size:13px;text-align:center;
+}
+#empty.show{display:flex;}
+</style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div id="hd">
+  <div id="hd-ico">🗺️</div>
+  <div id="hd-txt">
+    <div id="hd-title">한국 천주교 관구·교구</div>
+    <div id="hd-sub">3개 관구 · 16개 교구</div>
+  </div>
+  <button id="back-btn" onclick="history.back()" aria-label="뒤로가기">‹</button>
+</div>
+
+<!-- 탭 -->
+<div id="tab-bar">
+  <button class="tab on"  data-gw="all">전체 <span id="cnt-all">16</span></button>
+  <button class="tab"     data-gw="seoul">서울관구 <span id="cnt-seoul">8</span></button>
+  <button class="tab"     data-gw="daegu">대구관구 <span id="cnt-daegu">4</span></button>
+  <button class="tab"     data-gw="gwangju">광주관구 <span id="cnt-gwangju">3</span></button>
+  <button class="tab"     data-gw="gun">군종교구 <span id="cnt-gun">1</span></button>
+</div>
+
+<!-- 목록 -->
+<div id="list">
+
+  <!-- 서울관구 -->
+  <div class="gw-section seoul show" data-gw="seoul">
+    <div class="gw-hd">
+      <span class="gw-badge">서울관구</span>
+      <span class="gw-count">8개 교구</span>
+    </div>
+
+    <a class="card seoul" href="https://aos.catholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">대교구</span>
+        <span class="card-type">천주교 서울대교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">서울대교구</div>
+          <div class="card-region">📍 서울특별시 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">aos.catholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="http://www.caincheon.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 인천교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">인천교구</div>
+          <div class="card-region">📍 인천광역시·경기 서부</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">caincheon.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="https://www.casuwon.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 수원교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">수원교구</div>
+          <div class="card-region">📍 경기 남·동부 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">casuwon.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="https://ucatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 의정부교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">의정부교구</div>
+          <div class="card-region">📍 경기 북부·강원 북부</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">ucatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="https://www.cccatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 춘천교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">춘천교구</div>
+          <div class="card-region">📍 강원 북부·경기 동부 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">cccatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="http://www.wjcatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 원주교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">원주교구</div>
+          <div class="card-region">📍 강원 남부·충북 일부</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">wjcatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="https://www.djcatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 대전교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">대전교구</div>
+          <div class="card-region">📍 충남·대전광역시 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">djcatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card seoul" href="https://www.cdcj.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 청주교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">청주교구</div>
+          <div class="card-region">📍 충북 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">cdcj.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+  </div><!-- /서울관구 -->
+
+  <!-- 대구관구 -->
+  <div class="gw-section daegu show" data-gw="daegu">
+    <div class="gw-hd">
+      <span class="gw-badge">대구관구</span>
+      <span class="gw-count">4개 교구</span>
+    </div>
+
+    <a class="card daegu" href="https://www.daegu-archdiocese.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">대교구</span>
+        <span class="card-type">천주교 대구대교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">대구대교구</div>
+          <div class="card-region">📍 대구광역시·경북 일부</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">daegu-archdiocese.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card daegu" href="https://www.acatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 안동교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">안동교구</div>
+          <div class="card-region">📍 경북 북부·강원 일부</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">acatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card daegu" href="https://www.catholicbusan.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 부산교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">부산교구</div>
+          <div class="card-region">📍 부산·울산광역시·경남 동부</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">catholicbusan.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card daegu" href="https://cathms.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 마산교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">마산교구</div>
+          <div class="card-region">📍 경남 서부 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">cathms.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+  </div><!-- /대구관구 -->
+
+  <!-- 광주관구 -->
+  <div class="gw-section gwangju show" data-gw="gwangju">
+    <div class="gw-hd">
+      <span class="gw-badge">광주관구</span>
+      <span class="gw-count">3개 교구</span>
+    </div>
+
+    <a class="card gwangju" href="https://www.gjcatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">대교구</span>
+        <span class="card-type">천주교 광주대교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">광주대교구</div>
+          <div class="card-region">📍 광주광역시·전남 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">gjcatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card gwangju" href="https://jcatholic.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 전주교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">전주교구</div>
+          <div class="card-region">📍 전북 일원</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">jcatholic.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+
+    <a class="card gwangju" href="https://www.diocesejeju.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 제주교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">⛪</div>
+        <div class="card-info">
+          <div class="card-name">제주교구</div>
+          <div class="card-region">📍 제주특별자치도</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">diocesejeju.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+  </div><!-- /광주관구 -->
+
+  <!-- 군종교구 -->
+  <div class="gw-section gun show" data-gw="gun">
+    <div class="gw-hd">
+      <span class="gw-badge">군종교구</span>
+      <span class="gw-count">1개 교구</span>
+    </div>
+
+    <a class="card gun" href="https://www.gunjong.or.kr" target="_blank" rel="noopener">
+      <div class="card-top">
+        <span class="card-badge">교구</span>
+        <span class="card-type">천주교 군종교구</span>
+      </div>
+      <div class="card-body">
+        <div class="card-ico">🪖</div>
+        <div class="card-info">
+          <div class="card-name">군종교구</div>
+          <div class="card-region">📍 전국 군부대 사목</div>
+        </div>
+      </div>
+      <div class="card-foot">
+        <span class="card-url">gunjong.or.kr</span>
+        <span class="card-arrow">›</span>
+      </div>
+    </a>
+  </div><!-- /군종교구 -->
+
+  <div id="empty">
+    <div style="font-size:40px">🔍</div>
+    <div>해당 항목이 없습니다.</div>
+  </div>
+
+</div><!-- /list -->
+
+<script>
+(function(){
+  const tabs = document.querySelectorAll('.tab');
+  const sections = document.querySelectorAll('.gw-section');
+
+  function setTab(gw){
+    tabs.forEach(t => t.classList.toggle('on', t.dataset.gw === gw));
+    sections.forEach(s => {
+      const show = gw === 'all' || s.dataset.gw === gw;
+      s.classList.toggle('show', show);
+    });
+    // 관구 헤더는 전체탭일 때만 표시
+    document.querySelectorAll('.gw-hd').forEach(h => {
+      h.style.display = gw === 'all' ? '' : 'none';
+    });
+  }
+
+  tabs.forEach(t => {
+    t.addEventListener('click', () => setTab(t.dataset.gw));
+  });
+
+  // 초기: 전체탭이므로 관구 헤더 표시
+  document.querySelectorAll('.gw-hd').forEach(h => h.style.display = '');
+})();
+</script>
+</body>
+</html>
