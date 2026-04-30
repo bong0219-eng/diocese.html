@@ -1,645 +1,386 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>문의 · 건의 | 가톨릭 앱</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+import { useState } from "react";
 
-<!-- ★ Firebase SDK (compat) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-<style>
-  /* ── 리셋 & 기본 ── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --blue:   #1D4ED8;
-    --blue-l: #EFF6FF;
-    --blue-b: #BFDBFE;
-    --green:  #2A8040;
-    --green-l:#F0FDF4;
-    --green-b:#BBF7D0;
-    --gray-50:#F8FAFC; --gray-100:#F1F5F9; --gray-200:#E2E8F0;
-    --gray-400:#94A3B8; --gray-500:#64748B; --gray-700:#374151;
-    --gray-900:#0F172A;
-    --radius: 14px; --shadow: 0 2px 12px rgba(0,0,0,0.08);
-  }
-  body {
-    font-family: 'Noto Sans KR', sans-serif;
-    background: var(--gray-50);
-    min-height: 100vh;
-    max-width: 480px;
-    margin: 0 auto;
-    color: var(--gray-900);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* ── 헤더 ── */
-  #header {
-    background: var(--blue);
-    color: #fff;
-    padding: 14px 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 16px rgba(29,78,216,.25);
-  }
-  #back-btn {
-    display: none; background: rgba(255,255,255,.18); border: none;
-    color: #fff; border-radius: 10px; width: 36px; height: 36px;
-    font-size: 18px; cursor: pointer; flex-shrink: 0;
-    align-items: center; justify-content: center;
-  }
-  #back-btn.show { display: flex; }
-  #header-texts .title { font-size: 17px; font-weight: 700; }
-  #header-texts .sub   { font-size: 11px; opacity: .72; margin-top: 2px; }
-  #write-btn {
-    margin-left: auto; background: rgba(255,255,255,.18);
-    border: 1px solid rgba(255,255,255,.35); color: #fff;
-    border-radius: 20px; padding: 6px 15px;
-    font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
-    font-family: inherit;
-  }
-
-  /* ── 뷰 전환 ── */
-  .view { display: none; padding: 0 0 80px; }
-  .view.active { display: block; }
-
-  /* ── 필터 ── */
-  #filter-bar {
-    display: flex; gap: 6px; padding: 14px 14px 8px;
-    overflow-x: auto; scrollbar-width: none;
-  }
-  #filter-bar::-webkit-scrollbar { display: none; }
-  .filter-btn {
-    flex-shrink: 0; border: 1.5px solid var(--gray-200); border-radius: 20px;
-    padding: 5px 14px; font-size: 13px; background: #fff; color: var(--gray-500);
-    cursor: pointer; font-weight: 500; font-family: inherit; transition: all .15s;
-  }
-  .filter-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
-
-  /* ── 게시글 목록 ── */
-  #post-list { padding: 4px 14px; }
-  .card {
-    background: #fff; border-radius: var(--radius); padding: 14px 16px;
-    margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer;
-    animation: fadeUp .25s ease both; transition: transform .12s;
-  }
-  .card:active { transform: scale(.98); }
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .card-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 7px; }
-  .card-title { font-size: 14px; font-weight: 600; color: #1E293B; line-height: 1.45; margin-bottom: 5px; }
-  .card-meta  { font-size: 11px; color: var(--gray-400); }
-  .card-date  { margin-left: auto; font-size: 11px; color: var(--gray-400); }
-
-  /* 배지 공통 */
-  .badge {
-    border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700;
-    display: inline-flex; align-items: center; gap: 3px;
-  }
-  .badge-문의     { background:#EFF6FF; color:#1D4ED8; border:1px solid #BFDBFE; }
-  .badge-수정제안 { background:#FEF9C3; color:#92400E; border:1px solid #FDE68A; }
-  .badge-개선건의 { background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; }
-  .badge-칭찬     { background:#FDF4FF; color:#7E22CE; border:1px solid #E9D5FF; }
-  .badge-lock  { background:#F3F4F6; color:#6B7280; border:1px solid #E5E7EB; font-weight:500; }
-  .badge-done  { background:#F0FDF4; color:#166534; border:1px solid #BBF7D0; font-weight:600; }
-  .badge-wait  { background:#FEF9C3; color:#92400E; border:1px solid #FDE68A; font-weight:500; }
-
-  /* ── 상세 ── */
-  #detail-view { padding: 16px; }
-  .detail-head {
-    background: #fff; border-radius: var(--radius);
-    padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow);
-  }
-  .detail-title { font-size: 17px; font-weight: 700; color: #1E293B; margin: 10px 0 6px; line-height: 1.4; }
-  .detail-meta  { font-size: 12px; color: var(--gray-400); }
-  .detail-body  {
-    background: #fff; border-radius: var(--radius); padding: 16px;
-    font-size: 14px; line-height: 1.85; color: #334155;
-    margin-bottom: 12px; box-shadow: var(--shadow); white-space: pre-wrap;
-  }
-  .answer-box {
-    background: var(--blue-l); border: 1px solid var(--blue-b);
-    border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
-  }
-  .answer-label { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 8px; }
-  .answer-text  { font-size: 14px; line-height: 1.8; color: #1E3A5F; white-space: pre-wrap; }
-  .pending-box  {
-    background: var(--gray-50); border: 1px dashed var(--gray-200);
-    border-radius: var(--radius); padding: 14px; text-align: center;
-    font-size: 13px; color: var(--gray-500); margin-bottom: 12px;
-  }
-
-  /* ── 관리자 영역 ── */
-  .admin-area { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--gray-200); }
-  #admin-toggle-btn {
-    width: 100%; background: none; border: 1px dashed var(--gray-200);
-    color: var(--gray-400); border-radius: 10px; padding: 9px;
-    font-size: 12px; cursor: pointer; font-family: inherit;
-  }
-  #admin-form { background: #FFF8F0; border: 1px solid #FED7AA; border-radius: var(--radius); padding: 14px; }
-  .admin-pin-row { display: flex; gap: 8px; margin-bottom: 10px; }
-  #admin-pin-input { flex: 1; }
-  #admin-pin-check { padding: 0 16px; background: #92400E; color: #fff; border: none; border-radius: 10px; font-size: 13px; cursor: pointer; font-family: inherit; }
-  #answer-textarea {
-    width: 100%; border: 1px solid #FED7AA; border-radius: 10px;
-    padding: 10px 12px; font-size: 13px; line-height: 1.75; resize: vertical;
-    font-family: inherit; background: #fff; min-height: 100px;
-  }
-
-  /* ── 글쓰기 ── */
-  #write-view { padding: 16px; }
-  .field-group { margin-bottom: 18px; }
-  .field-label { display: block; font-size: 13px; font-weight: 700; color: var(--gray-700); margin-bottom: 8px; }
-  .cat-row { display: flex; gap: 8px; flex-wrap: wrap; }
-  .cat-opt {
-    border: 1.5px solid var(--gray-200); border-radius: 20px;
-    padding: 6px 16px; font-size: 13px; background: #fff;
-    color: var(--gray-500); cursor: pointer; font-weight: 500; font-family: inherit;
-    transition: all .15s;
-  }
-  .cat-opt.active-문의     { background:#EFF6FF; color:#1D4ED8; border-color:#BFDBFE; font-weight:700; }
-  .cat-opt.active-수정제안 { background:#FEF9C3; color:#92400E; border-color:#FDE68A; font-weight:700; }
-  .cat-opt.active-개선건의 { background:#F0FDF4; color:#166534; border-color:#BBF7D0; font-weight:700; }
-  .cat-opt.active-칭찬     { background:#FDF4FF; color:#7E22CE; border-color:#E9D5FF; font-weight:700; }
-  input[type=text], input[type=number], textarea {
-    width: 100%; border: 1.5px solid var(--gray-200); border-radius: 10px;
-    padding: 11px 14px; font-size: 14px; font-family: inherit; outline: none;
-    background: #fff; transition: border-color .15s;
-  }
-  input[type=text]:focus, input[type=number]:focus, textarea:focus { border-color: var(--blue); }
-  textarea { resize: vertical; line-height: 1.75; }
-  .char-count { text-align: right; font-size: 11px; color: var(--gray-400); margin-top: 4px; }
-  .secret-box {
-    background: var(--gray-50); border: 1px solid var(--gray-200);
-    border-radius: 12px; padding: 14px;
-  }
-  .secret-check-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  .secret-desc { font-size: 11px; color: var(--gray-400); margin: 6px 0 0 24px; }
-  .error-msg { color: #DC2626; font-size: 13px; margin-bottom: 12px; }
-  .notice-txt { text-align: center; font-size: 11px; color: var(--gray-400); margin-top: 12px; }
-
-  /* ── 버튼 ── */
-  .btn-primary {
-    width: 100%; background: var(--blue); color: #fff; border: none;
-    border-radius: 12px; padding: 13px; font-size: 15px; font-weight: 700;
-    cursor: pointer; font-family: inherit; transition: opacity .15s;
-  }
-  .btn-primary:active { opacity: .85; }
-  .btn-secondary {
-    flex: 1; background: var(--gray-100); color: var(--gray-500); border: none;
-    border-radius: 12px; padding: 12px; font-size: 14px; font-weight: 600;
-    cursor: pointer; font-family: inherit;
-  }
-  .btn-row { display: flex; gap: 8px; margin-top: 10px; }
-
-  /* ── 성공 화면 ── */
-  #success-view { padding: 60px 24px; text-align: center; display: none; }
-  #success-view .icon { font-size: 52px; margin-bottom: 16px; }
-  #success-view .ttl  { font-size: 20px; font-weight: 700; color: var(--blue); margin-bottom: 8px; }
-  #success-view .sub  { font-size: 14px; color: var(--gray-500); line-height: 1.8; margin-bottom: 28px; }
-
-  /* ── 로딩 / 빈화면 ── */
-  .loading-box { text-align: center; padding: 60px 0; color: var(--gray-400); font-size: 14px; }
-  .spinner {
-    width: 28px; height: 28px; border: 3px solid var(--gray-200);
-    border-top-color: var(--blue); border-radius: 50%;
-    animation: spin .7s linear infinite; margin: 0 auto 12px;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── PIN 모달 ── */
-  #pin-modal {
-    position: fixed; inset: 0; background: rgba(0,0,0,.55);
-    display: none; align-items: center; justify-content: center;
-    z-index: 200; padding: 24px;
-  }
-  #pin-modal.show { display: flex; }
-  .modal-box {
-    background: #fff; border-radius: 20px; padding: 28px 24px;
-    width: 100%; max-width: 320px; text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,.25);
-  }
-  .modal-icon  { font-size: 40px; margin-bottom: 8px; }
-  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
-  .modal-sub   { font-size: 13px; color: var(--gray-500); margin-bottom: 16px; }
-  #pin-input {
-    text-align: center; letter-spacing: 8px; font-size: 22px;
-    font-weight: 700; margin-bottom: 8px;
-  }
-</style>
-</head>
-<body>
-
-<!-- 헤더 -->
-<div id="header">
-  <button id="back-btn" onclick="goList()">←</button>
-  <div id="header-texts">
-    <div class="title" id="header-title">문의 · 건의</div>
-    <div class="sub">가톨릭 앱 문의 · 수정 · 개선건의</div>
-  </div>
-  <button id="write-btn" onclick="goWrite()">✏️ 글쓰기</button>
-</div>
-
-<!-- 목록 뷰 -->
-<div id="list-view" class="view active">
-  <div id="filter-bar"></div>
-  <div id="post-list"><div class="loading-box"><div class="spinner"></div>불러오는 중…</div></div>
-</div>
-
-<!-- 상세 뷰 -->
-<div id="detail-view-wrap" class="view">
-  <div id="detail-view"></div>
-</div>
-
-<!-- 글쓰기 뷰 -->
-<div id="write-view" class="view">
-  <div class="field-group">
-    <label class="field-label">분류</label>
-    <div class="cat-row" id="cat-row"></div>
-  </div>
-  <div class="field-group">
-    <label class="field-label">제목</label>
-    <input type="text" id="f-title" placeholder="간단하게 제목을 적어주세요" maxlength="50">
-  </div>
-  <div class="field-group">
-    <label class="field-label">내용</label>
-    <textarea id="f-content" rows="6" placeholder="문의 내용이나 건의사항을 자유롭게 적어주세요.&#10;익명으로 접수됩니다." maxlength="500"
-      oninput="document.getElementById('char-cnt').textContent=this.value.length"></textarea>
-    <div class="char-count"><span id="char-cnt">0</span> / 500</div>
-  </div>
-  <div class="field-group">
-    <div class="secret-box">
-      <label class="secret-check-label">
-        <input type="checkbox" id="f-secret" onchange="togglePinField(this.checked)">
-        <span>🔒 비밀글로 작성</span>
-      </label>
-      <div class="secret-desc">목록에는 보이지만 내용은 비밀번호 입력 후 열람 가능합니다</div>
-      <div id="pin-field" style="display:none; margin-top:10px;">
-        <input type="number" id="f-pin" placeholder="숫자 4자리 비밀번호 설정" maxlength="4"
-          oninput="if(this.value.length>4)this.value=this.value.slice(0,4)">
-      </div>
-    </div>
-  </div>
-  <div id="form-error" class="error-msg" style="display:none;"></div>
-  <button class="btn-primary" onclick="submitPost()">접수하기</button>
-  <div class="notice-txt">✓ 익명으로 접수됩니다 &nbsp;·&nbsp; ✓ 개인정보 수집 없음</div>
-</div>
-
-<!-- 접수 완료 -->
-<div id="success-view">
-  <div class="icon">🙏</div>
-  <div class="ttl">접수되었습니다</div>
-  <div class="sub">소중한 의견 감사합니다.<br>빠르게 검토 후 답변드리겠습니다.</div>
-  <button class="btn-primary" onclick="goList()">목록으로</button>
-</div>
-
-<!-- PIN 모달 -->
-<div id="pin-modal">
-  <div class="modal-box">
-    <div class="modal-icon">🔒</div>
-    <div class="modal-title">비밀글입니다</div>
-    <div class="modal-sub">작성 시 설정한 4자리 비밀번호를 입력하세요</div>
-    <input type="number" id="pin-input" placeholder="····" maxlength="4"
-      oninput="if(this.value.length>4)this.value=this.value.slice(0,4)"
-      onkeydown="if(event.key==='Enter')checkPin()">
-    <div id="pin-error" class="error-msg" style="display:none;">비밀번호가 틀렸습니다</div>
-    <div class="btn-row">
-      <button class="btn-primary" style="font-size:14px;" onclick="checkPin()">확인</button>
-      <button class="btn-secondary" onclick="closePinModal()">취소</button>
-    </div>
-  </div>
-</div>
-
-
-<script>
-/* ══════════════════════════════════════════════
-   ★ 1. Firebase 설정 — 아래 값만 교체하면 됩니다
-   ══════════════════════════════════════════════ */
-const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+const ADMIN_PW = "bong0219";
+const CATEGORIES = ["문의","수정제안","개선건의","칭찬"];
+const ANON = ["익명의 순례자","익명의 신자","익명의 형제","익명의 자매","익명의 교우","익명의 성도"];
+const CS = {
+  "문의":     {bg:"#EFF6FF",tx:"#1D4ED8",bd:"#BFDBFE"},
+  "수정제안": {bg:"#FEF9C3",tx:"#92400E",bd:"#FDE68A"},
+  "개선건의": {bg:"#F0FDF4",tx:"#166534",bd:"#BBF7D0"},
+  "칭찬":     {bg:"#FDF4FF",tx:"#7E22CE",bd:"#E9D5FF"},
 };
+const INIT = [
+  {id:1,cat:"문의",title:"순례길 지도에서 현재 위치가 안 잡혀요",
+   body:"GPS를 켜도 파란 점이 안 보입니다. 제 폰 문제인가요?",
+   author:"익명의 순례자",date:"2026-04-28",secret:false,pin:null,
+   answer:"브라우저 위치 권한을 허용해 주시면 됩니다. 주소창 자물쇠 → 위치 → 허용 으로 설정해 보세요 🙏",answered:true},
+  {id:2,cat:"개선건의",title:"미사 시간 알림 기능이 있으면 좋겠어요",
+   body:"매주 성당 미사 시간을 앱에서 확인하고 알림도 받을 수 있으면 좋겠습니다.",
+   author:"익명의 신자",date:"2026-04-27",secret:false,pin:null,answer:null,answered:false},
+  {id:3,cat:"수정제안",title:"비밀글입니다",
+   body:"답동주교좌 성당 주소가 잘못 입력되어 있는 것 같습니다. 확인 부탁드립니다.",
+   author:"익명의 형제",date:"2026-04-26",secret:true,pin:"1234",answer:null,answered:false},
+  {id:4,cat:"칭찬",title:"순례길 정보가 정말 유용해요!",
+   body:"각 성지별 교통편 안내까지 있어서 가족과 다녀오기 너무 좋았습니다.",
+   author:"익명의 자매",date:"2026-04-25",secret:false,pin:null,
+   answer:"따뜻한 말씀 감사합니다! 더 좋은 앱 만들도록 노력하겠습니다 😊",answered:true},
+  {id:5,cat:"문의",title:"비밀글입니다",
+   body:"제가 올린 성당 사진 데이터 삭제 요청드립니다.",
+   author:"익명의 교우",date:"2026-04-24",secret:true,pin:"5678",
+   answer:"확인하였습니다. 해당 데이터 처리해 드리겠습니다.",answered:true},
+];
 
-/* ★ 2. 관리자 비밀번호 (상봉님만 아는 숫자/문자) */
-const ADMIN_PASSWORD = "bong0219";
+const Badge = ({children, bg, tx, bd, fw=700}) => (
+  <span style={{background:bg,color:tx,border:`1px solid ${bd}`,borderRadius:20,
+    padding:"2px 9px",fontSize:11,fontWeight:fw,display:"inline-flex",alignItems:"center",gap:3}}>
+    {children}
+  </span>
+);
 
-/* ══════════════════════════════════════════════ */
+const Btn = ({children, onClick, style={}}) => (
+  <button onClick={onClick} style={{fontFamily:"inherit",cursor:"pointer",...style}}>{children}</button>
+);
 
-firebase.initializeApp(FIREBASE_CONFIG);
-const db = firebase.firestore();
-const COL = db.collection("qa_posts");
+export default function App() {
+  const [posts,    setPosts]   = useState(INIT);
+  const [page,     setPage]    = useState("list"); // list | write | detail | done
+  const [filter,   setFilter]  = useState("전체");
+  const [sel,      setSel]     = useState(null);
+  const [unlocked, setUnlocked]= useState(new Set());
 
-/* ─── 상수 ─── */
-const CATEGORIES  = ["문의","수정제안","개선건의","칭찬"];
-const ANON_NAMES  = ["익명의 순례자","익명의 신자","익명의 형제","익명의 자매","익명의 교우","익명의 성도"];
-const FILTERS     = ["전체", ...CATEGORIES];
+  // 글쓰기
+  const [fCat,setFCat]       = useState("문의");
+  const [fTitle,setFTitle]   = useState("");
+  const [fBody,setFBody]     = useState("");
+  const [fSecret,setFSecret] = useState(false);
+  const [fPin,setFPin]       = useState("");
+  const [fErr,setFErr]       = useState("");
 
-/* ─── 상태 ─── */
-let currentFilter  = "전체";
-let currentPost    = null;
-let pinPendingPost = null;
-let unlockedSet    = new Set();       // 이 세션에서 PIN 통과한 doc ID
-let selectedCat    = "문의";
-let adminUnlocked  = false;
-let unsubscribe    = null;
+  // PIN 모달
+  const [pinFor,setPinFor]   = useState(null);
+  const [pinVal,setPinVal]   = useState("");
+  const [pinErr,setPinErr]   = useState(false);
 
-/* ═══════════════════ 뷰 전환 ═══════════════════ */
-function showView(id) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const el = document.getElementById(id);
-  if (el) el.classList.add('active');
+  // 관리자
+  const [adminOpen,setAdminOpen]     = useState(false);
+  const [adminPw,setAdminPw]         = useState("");
+  const [adminOk,setAdminOk]         = useState(false);
+  const [adminErr,setAdminErr]       = useState(false);
+  const [answerDraft,setAnswerDraft] = useState("");
 
-  const isList   = id === 'list-view';
-  const isDetail = id === 'detail-view-wrap';
-  const isWrite  = id === 'write-view';
+  const isOk = id => unlocked.has(id);
 
-  document.getElementById('back-btn').classList.toggle('show', !isList);
-  document.getElementById('write-btn').style.display = isList ? '' : 'none';
-  document.getElementById('success-view').style.display = 'none';
-
-  const titles = { 'list-view':'문의 · 건의', 'detail-view-wrap':'상세보기', 'write-view':'글 작성' };
-  document.getElementById('header-title').textContent = titles[id] || '문의 · 건의';
-}
-
-function goList()   { showView('list-view');  adminUnlocked = false; }
-function goWrite()  {
-  resetForm();
-  showView('write-view');
-}
-function goDetail() { showView('detail-view-wrap'); }
-
-/* ═══════════════════ 필터 바 ═══════════════════ */
-function buildFilterBar() {
-  const bar = document.getElementById('filter-bar');
-  bar.innerHTML = '';
-  FILTERS.forEach(f => {
-    const btn = document.createElement('button');
-    btn.className = 'filter-btn' + (f === currentFilter ? ' active' : '');
-    btn.textContent = f;
-    btn.onclick = () => { currentFilter = f; buildFilterBar(); renderList(window._cachedPosts || []); };
-    bar.appendChild(btn);
-  });
-}
-
-/* ═══════════════════ 목록 렌더링 ═══════════════════ */
-window._cachedPosts = [];
-
-function renderList(posts) {
-  window._cachedPosts = posts;
-  const filtered = currentFilter === '전체' ? posts : posts.filter(p => p.category === currentFilter);
-  const container = document.getElementById('post-list');
-
-  if (filtered.length === 0) {
-    container.innerHTML = '<div class="loading-box" style="color:#94A3B8;">게시글이 없습니다.</div>';
-    return;
-  }
-
-  container.innerHTML = filtered.map((p, i) => {
-    const isSecret  = p.secret && !unlockedSet.has(p.id);
-    const titleHTML = isSecret
-      ? '<span style="color:#9CA3AF">비밀글입니다 · 비밀번호를 입력해주세요</span>'
-      : escHtml(p.title);
-    const statusBadge = p.answered
-      ? '<span class="badge badge-done">✓ 답변완료</span>'
-      : '<span class="badge badge-wait">⏳ 답변대기</span>';
-
-    return `
-      <div class="card" style="animation-delay:${i*0.04}s" onclick="openPost('${p.id}')">
-        <div class="card-top">
-          <span class="badge badge-${p.category}">${p.category}</span>
-          ${p.secret ? '<span class="badge badge-lock">🔒 비밀글</span>' : ''}
-          ${statusBadge}
-          <span class="card-date">${p.date}</span>
-        </div>
-        <div class="card-title">${titleHTML}</div>
-        <div class="card-meta">${escHtml(p.author)}</div>
-      </div>`;
-  }).join('');
-}
-
-/* ═══════════════════ 실시간 구독 ═══════════════════ */
-function subscribeList() {
-  if (unsubscribe) unsubscribe();
-  document.getElementById('post-list').innerHTML =
-    '<div class="loading-box"><div class="spinner"></div>불러오는 중…</div>';
-
-  unsubscribe = COL
-    .orderBy('createdAt', 'desc')
-    .onSnapshot(snap => {
-      const posts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderList(posts);
-    }, err => {
-      console.error(err);
-      document.getElementById('post-list').innerHTML =
-        '<div class="loading-box">데이터를 불러오지 못했습니다.<br>Firebase 설정을 확인해주세요.</div>';
-    });
-}
-
-/* ═══════════════════ 게시글 열기 ═══════════════════ */
-function openPost(id) {
-  const post = window._cachedPosts.find(p => p.id === id);
-  if (!post) return;
-
-  if (post.secret && !unlockedSet.has(id)) {
-    pinPendingPost = post;
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-error').style.display = 'none';
-    document.getElementById('pin-modal').classList.add('show');
-    setTimeout(() => document.getElementById('pin-input').focus(), 100);
-  } else {
-    showDetailView(post);
-  }
-}
-
-function showDetailView(post) {
-  currentPost   = post;
-  adminUnlocked = false;
-
-  const isSecret = post.secret && !unlockedSet.has(post.id);
-  const contentHTML = isSecret ? '' : escHtml(post.content);
-
-  document.getElementById('detail-view').innerHTML = `
-    <div style="padding:16px;">
-      <div class="detail-head">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          <span class="badge badge-${post.category}">${post.category}</span>
-          ${post.secret ? '<span class="badge badge-lock">🔒 비밀글</span>' : ''}
-          ${post.answered
-            ? '<span class="badge badge-done">✓ 답변완료</span>'
-            : '<span class="badge badge-wait">⏳ 답변대기</span>'}
-        </div>
-        <div class="detail-title">${escHtml(post.title)}</div>
-        <div class="detail-meta">${escHtml(post.author)} · ${post.date}</div>
-      </div>
-
-      <div class="detail-body">${contentHTML}</div>
-
-      ${post.answered && post.answer ? `
-        <div class="answer-box">
-          <div class="answer-label">🙏 운영자 답변</div>
-          <div class="answer-text">${escHtml(post.answer)}</div>
-        </div>` : `
-        <div class="pending-box">⏳ 답변을 준비 중입니다. 잠시 기다려 주세요.</div>`}
-
-      <div class="admin-area">
-        <button id="admin-toggle-btn" onclick="toggleAdminArea()">🔧 관리자 답변 달기</button>
-        <div id="admin-form" style="display:none;">
-          <div style="font-size:13px;font-weight:700;color:#92400E;margin-bottom:10px;">관리자 인증 후 답변 작성</div>
-          <div class="admin-pin-row" id="admin-pin-row">
-            <input type="password" id="admin-pin-input" placeholder="관리자 비밀번호" style="flex:1;">
-            <button id="admin-pin-check" onclick="verifyAdmin()">확인</button>
-          </div>
-          <div id="admin-write-area" style="display:none;">
-            <textarea id="answer-textarea" rows="4" placeholder="답변을 입력하세요…">${escHtml(post.answer || '')}</textarea>
-            <div class="btn-row">
-              <button class="btn-primary" style="font-size:14px;" onclick="submitAnswer()">답변 등록</button>
-              <button class="btn-secondary" onclick="toggleAdminArea()">취소</button>
-            </div>
-          </div>
-          <div id="admin-error" class="error-msg" style="display:none;margin-top:8px;"></div>
-        </div>
-      </div>
-    </div>`;
-
-  goDetail();
-}
-
-/* ═══════════════════ PIN 모달 ═══════════════════ */
-function checkPin() {
-  const val = document.getElementById('pin-input').value;
-  if (val === pinPendingPost.pin) {
-    unlockedSet.add(pinPendingPost.id);
-    closePinModal();
-    showDetailView(pinPendingPost);
-  } else {
-    document.getElementById('pin-error').style.display = 'block';
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-input').focus();
-  }
-}
-function closePinModal() {
-  document.getElementById('pin-modal').classList.remove('show');
-  pinPendingPost = null;
-}
-
-/* ═══════════════════ 관리자 ═══════════════════ */
-function toggleAdminArea() {
-  const form = document.getElementById('admin-form');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-}
-function verifyAdmin() {
-  const pw = document.getElementById('admin-pin-input').value;
-  if (pw === ADMIN_PASSWORD) {
-    document.getElementById('admin-pin-row').style.display = 'none';
-    document.getElementById('admin-write-area').style.display = 'block';
-    document.getElementById('admin-error').style.display = 'none';
-    adminUnlocked = true;
-  } else {
-    document.getElementById('admin-error').textContent = '비밀번호가 틀렸습니다.';
-    document.getElementById('admin-error').style.display = 'block';
-  }
-}
-async function submitAnswer() {
-  if (!adminUnlocked) return;
-  const text = document.getElementById('answer-textarea').value.trim();
-  if (!text) return;
-  try {
-    await COL.doc(currentPost.id).update({ answer: text, answered: true });
-    currentPost = { ...currentPost, answer: text, answered: true };
-    alert('답변이 등록되었습니다.');
-    showDetailView(currentPost);
-  } catch(e) {
-    alert('저장 실패: ' + e.message);
-  }
-}
-
-/* ═══════════════════ 글쓰기 ═══════════════════ */
-function buildCatRow() {
-  const row = document.getElementById('cat-row');
-  row.innerHTML = '';
-  CATEGORIES.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className = 'cat-opt' + (c === selectedCat ? ` active-${c}` : '');
-    btn.textContent = c;
-    btn.onclick = () => { selectedCat = c; buildCatRow(); };
-    row.appendChild(btn);
-  });
-}
-function togglePinField(on) {
-  document.getElementById('pin-field').style.display = on ? 'block' : 'none';
-  if (!on) document.getElementById('f-pin').value = '';
-}
-function resetForm() {
-  selectedCat = '문의';
-  buildCatRow();
-  document.getElementById('f-title').value   = '';
-  document.getElementById('f-content').value = '';
-  document.getElementById('f-secret').checked = false;
-  document.getElementById('f-pin').value    = '';
-  document.getElementById('pin-field').style.display = 'none';
-  document.getElementById('char-cnt').textContent = '0';
-  document.getElementById('form-error').style.display = 'none';
-}
-
-async function submitPost() {
-  const title   = document.getElementById('f-title').value.trim();
-  const content = document.getElementById('f-content').value.trim();
-  const secret  = document.getElementById('f-secret').checked;
-  const pin     = document.getElementById('f-pin').value;
-  const errEl   = document.getElementById('form-error');
-
-  if (!title || !content) {
-    errEl.textContent = '제목과 내용을 입력해주세요.'; errEl.style.display = 'block'; return;
-  }
-  if (secret && pin.length < 4) {
-    errEl.textContent = '비밀번호는 4자리 숫자로 입력해주세요.'; errEl.style.display = 'block'; return;
-  }
-  errEl.style.display = 'none';
-
-  const author = ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
-  const today  = new Date().toISOString().slice(0, 10);
-
-  const data = {
-    category: selectedCat, title, content, author, date: today,
-    secret, pin: secret ? pin : null,
-    answer: null, answered: false,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  const navDetail = (post) => {
+    setSel(post);
+    setAnswerDraft(post.answer||"");
+    setAdminOpen(false); setAdminOk(false); setAdminPw(""); setAdminErr(false);
+    setPage("detail");
   };
 
-  try {
-    const ref = await COL.add(data);
-    if (secret) unlockedSet.add(ref.id);   // 본인은 바로 열람 가능
-    showView('list-view');
-    document.getElementById('success-view').style.display = 'block';
-    document.getElementById('list-view').style.display = 'none';
-    document.getElementById('header-title').textContent = '접수 완료';
-    document.getElementById('back-btn').classList.add('show');
-  } catch(e) {
-    errEl.textContent = '저장 실패: ' + e.message; errEl.style.display = 'block';
-  }
-}
+  const openPost = (post) => {
+    if (post.secret && !isOk(post.id)) {
+      setPinFor(post); setPinVal(""); setPinErr(false);
+    } else { navDetail(post); }
+  };
 
-/* ═══════════════════ 유틸 ═══════════════════ */
-function escHtml(str) {
-  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
-}
+  const checkPin = () => {
+    if (pinVal === pinFor.pin) {
+      setUnlocked(p => new Set([...p, pinFor.id]));
+      const post = pinFor; setPinFor(null);
+      navDetail(post);
+    } else { setPinErr(true); setPinVal(""); }
+  };
 
-/* ═══════════════════ 초기화 ═══════════════════ */
-buildFilterBar();
-buildCatRow();
-subscribeList();
-</script>
-</body>
-</html>
+  const submitPost = () => {
+    if (!fTitle.trim() || !fBody.trim()) { setFErr("제목과 내용을 입력해주세요."); return; }
+    if (fSecret && fPin.length < 4)      { setFErr("비밀번호는 4자리 숫자로 입력해주세요."); return; }
+    const nid = Date.now();
+    const p = {id:nid, cat:fCat, title:fTitle.trim(), body:fBody.trim(),
+      author:ANON[Math.floor(Math.random()*ANON.length)],
+      date:new Date().toISOString().slice(0,10),
+      secret:fSecret, pin:fSecret?fPin:null, answer:null, answered:false};
+    if (fSecret) setUnlocked(prev => new Set([...prev, nid]));
+    setPosts(prev => [p, ...prev]);
+    setFTitle(""); setFBody(""); setFCat("문의"); setFSecret(false); setFPin(""); setFErr("");
+    setPage("done");  // ← 접수완료 화면으로 이동
+  };
+
+  const verifyAdmin = () => {
+    if (adminPw === ADMIN_PW) { setAdminOk(true); setAdminErr(false); }
+    else { setAdminErr(true); setAdminPw(""); }
+  };
+
+  const postAnswer = () => {
+    if (!answerDraft.trim()) return;
+    const updated = {...sel, answer:answerDraft.trim(), answered:true};
+    setPosts(prev => prev.map(p => p.id===sel.id ? updated : p));
+    setSel(updated); setAdminOpen(false); setAdminOk(false);
+  };
+
+  const goList = () => {
+    setPage("list"); setSel(null);
+    setAdminOpen(false); setAdminOk(false); setAdminPw(""); setAdminErr(false);
+  };
+
+  const filtered = posts.filter(p => filter==="전체" || p.cat===filter);
+
+  // ── 스타일 공통 ──
+  const inp = {width:"100%",border:"1.5px solid #E2E8F0",borderRadius:10,
+    padding:"10px 13px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"};
+  const ta  = {...inp,resize:"vertical",lineHeight:1.75};
+  const pb  = {width:"100%",background:"#1D4ED8",color:"#fff",border:"none",
+    borderRadius:11,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"};
+  const sg  = {flex:1,background:"#F1F5F9",color:"#64748B",border:"none",
+    borderRadius:11,padding:"11px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"};
+
+  const TITLES = {list:"문의 · 건의", write:"글 작성", detail:"상세보기", done:"접수 완료"};
+
+  return (
+    <div style={{fontFamily:"'Noto Sans KR',sans-serif",background:"#F8FAFC",
+      minHeight:620,maxWidth:430,margin:"0 auto",borderRadius:16,overflow:"hidden",
+      boxShadow:"0 4px 32px rgba(0,0,0,.13)",position:"relative",display:"flex",flexDirection:"column"}}>
+
+      {/* ── 헤더 ── */}
+      <div style={{background:"#1D4ED8",color:"#fff",padding:"13px 15px",
+        display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        {page!=="list" && (
+          <button onClick={goList} style={{background:"rgba(255,255,255,.18)",border:"none",
+            color:"#fff",borderRadius:9,width:33,height:33,fontSize:17,cursor:"pointer",
+            display:"flex",alignItems:"center",justifyContent:"center"}}>←</button>
+        )}
+        <div>
+          <div style={{fontSize:16,fontWeight:700}}>{TITLES[page]}</div>
+          <div style={{fontSize:10,opacity:.72,marginTop:1}}>가톨릭 앱 문의 · 수정 · 개선건의</div>
+        </div>
+        {page==="list" && (
+          <button onClick={()=>{setFTitle("");setFBody("");setFCat("문의");setFSecret(false);setFPin("");setFErr("");setPage("write");}}
+            style={{marginLeft:"auto",background:"rgba(255,255,255,.18)",
+              border:"1px solid rgba(255,255,255,.35)",color:"#fff",borderRadius:20,
+              padding:"5px 13px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+            ✏️ 글쓰기
+          </button>
+        )}
+      </div>
+
+      {/* ── 안내 배너 (list에서만) ── */}
+      {page==="list" && (
+        <div style={{background:"#FEF9C3",borderBottom:"1px solid #FDE68A",
+          padding:"8px 14px",fontSize:11,color:"#92400E",lineHeight:1.6,flexShrink:0}}>
+          <b>📌 시연 안내</b>&nbsp; 비밀글 PIN: <b>1234</b> / <b>5678</b> &nbsp;·&nbsp; 관리자 비밀번호: <b>bong0219</b><br/>
+          ⚠️ Firebase 연동 전까지는 데이터가 공유되지 않습니다 (각자 기기에서만 보임)
+        </div>
+      )}
+
+      {/* ── 본문 ── */}
+      <div style={{flex:1,overflowY:"auto",minHeight:0}}>
+
+        {/* 목록 */}
+        {page==="list" && <>
+          <div style={{display:"flex",gap:6,padding:"11px 13px 5px",overflowX:"auto",scrollbarWidth:"none"}}>
+            {["전체",...CATEGORIES].map(f=>(
+              <button key={f} onClick={()=>setFilter(f)}
+                style={{flexShrink:0,border:`1.5px solid ${filter===f?"#1D4ED8":"#E2E8F0"}`,
+                  borderRadius:20,padding:"4px 12px",fontSize:12,fontFamily:"inherit",
+                  background:filter===f?"#1D4ED8":"#fff",
+                  color:filter===f?"#fff":"#64748B",
+                  cursor:"pointer",fontWeight:filter===f?700:500}}>
+                {f}
+              </button>
+            ))}
+          </div>
+          <div style={{padding:"3px 12px 40px"}}>
+            {filtered.length===0 && <div style={{textAlign:"center",color:"#94A3B8",padding:"48px 0",fontSize:13}}>게시글이 없습니다.</div>}
+            {filtered.map((p,i)=>{
+              const locked = p.secret && !isOk(p.id);
+              return (
+                <div key={p.id} onClick={()=>openPost(p)}
+                  style={{background:"#fff",borderRadius:13,padding:"13px 14px",marginBottom:9,
+                    boxShadow:"0 1px 7px rgba(0,0,0,.08)",cursor:"pointer"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:5,flexWrap:"wrap",marginBottom:6}}>
+                    <Badge bg={CS[p.cat].bg} tx={CS[p.cat].tx} bd={CS[p.cat].bd}>{p.cat}</Badge>
+                    {p.secret && <Badge bg="#F3F4F6" tx="#6B7280" bd="#E5E7EB" fw={500}>🔒 비밀글</Badge>}
+                    {p.answered
+                      ? <Badge bg="#F0FDF4" tx="#166534" bd="#BBF7D0">✓ 답변완료</Badge>
+                      : <Badge bg="#FEF9C3" tx="#92400E" bd="#FDE68A" fw={500}>⏳ 답변대기</Badge>}
+                    <span style={{marginLeft:"auto",fontSize:11,color:"#94A3B8"}}>{p.date}</span>
+                  </div>
+                  <div style={{fontSize:14,fontWeight:600,color:locked?"#9CA3AF":"#1E293B",lineHeight:1.4,marginBottom:4}}>
+                    {locked?"🔒 비밀글입니다 · 비밀번호를 입력해주세요":p.title}
+                  </div>
+                  <div style={{fontSize:11,color:"#94A3B8"}}>{p.author}</div>
+                </div>
+              );
+            })}
+          </div>
+        </>}
+
+        {/* 상세 */}
+        {page==="detail" && sel && (
+          <div style={{padding:"14px 13px 40px"}}>
+            <div style={{background:"#fff",borderRadius:13,padding:"15px",marginBottom:11,boxShadow:"0 1px 7px rgba(0,0,0,.08)"}}>
+              <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:9}}>
+                <Badge bg={CS[sel.cat].bg} tx={CS[sel.cat].tx} bd={CS[sel.cat].bd}>{sel.cat}</Badge>
+                {sel.secret && <Badge bg="#F3F4F6" tx="#6B7280" bd="#E5E7EB" fw={500}>🔒 비밀글</Badge>}
+                {sel.answered
+                  ? <Badge bg="#F0FDF4" tx="#166534" bd="#BBF7D0">✓ 답변완료</Badge>
+                  : <Badge bg="#FEF9C3" tx="#92400E" bd="#FDE68A" fw={500}>⏳ 답변대기</Badge>}
+              </div>
+              <div style={{fontSize:16,fontWeight:700,color:"#1E293B",lineHeight:1.4,marginBottom:5}}>{sel.title}</div>
+              <div style={{fontSize:11,color:"#94A3B8"}}>{sel.author} · {sel.date}</div>
+            </div>
+
+            <div style={{background:"#fff",borderRadius:13,padding:"15px",fontSize:13,
+              lineHeight:1.85,color:"#334155",marginBottom:11,boxShadow:"0 1px 7px rgba(0,0,0,.08)",whiteSpace:"pre-wrap"}}>
+              {sel.body}
+            </div>
+
+            {sel.answered && sel.answer ? (
+              <div style={{background:"#EFF6FF",border:"1px solid #BFDBFE",borderRadius:13,padding:"14px",marginBottom:11}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#1D4ED8",marginBottom:7}}>🙏 운영자 답변</div>
+                <div style={{fontSize:13,lineHeight:1.8,color:"#1E3A5F",whiteSpace:"pre-wrap"}}>{sel.answer}</div>
+              </div>
+            ) : (
+              <div style={{background:"#F8FAFC",border:"1px dashed #CBD5E1",borderRadius:13,
+                padding:"13px",textAlign:"center",fontSize:13,color:"#64748B",marginBottom:11}}>
+                ⏳ 답변을 준비 중입니다. 잠시 기다려 주세요.
+              </div>
+            )}
+
+            {/* 관리자 영역 */}
+            <div style={{marginTop:16,paddingTop:14,borderTop:"1px dashed #E2E8F0"}}>
+              <div style={{fontSize:11,color:"#94A3B8",textAlign:"center",marginBottom:10}}>
+                ─── 아래는 관리자(상봉님)만 사용하는 영역입니다 ───
+              </div>
+              {!adminOpen ? (
+                <button onClick={()=>setAdminOpen(true)}
+                  style={{width:"100%",background:"none",border:"1px dashed #CBD5E1",
+                    color:"#94A3B8",borderRadius:10,padding:"9px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>
+                  🔧 관리자 답변 달기
+                </button>
+              ) : !adminOk ? (
+                <div style={{background:"#FFF8F0",border:"1px solid #FED7AA",borderRadius:13,padding:13}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:9}}>관리자 비밀번호 확인</div>
+                  <div style={{display:"flex",gap:7,marginBottom:6}}>
+                    <input type="password" style={{...inp,flex:1}} placeholder="비밀번호 입력"
+                      value={adminPw} onChange={e=>setAdminPw(e.target.value)}
+                      onKeyDown={e=>e.key==="Enter"&&verifyAdmin()} />
+                    <button onClick={verifyAdmin}
+                      style={{background:"#92400E",color:"#fff",border:"none",borderRadius:9,
+                        padding:"0 14px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>확인</button>
+                  </div>
+                  {adminErr && <div style={{color:"#DC2626",fontSize:12,marginBottom:4}}>비밀번호가 틀렸습니다.</div>}
+                  <div style={{fontSize:11,color:"#B45309"}}>힌트: <b>bong0219</b></div>
+                  <button onClick={()=>setAdminOpen(false)}
+                    style={{...sg,width:"100%",marginTop:9}}>취소</button>
+                </div>
+              ) : (
+                <div style={{background:"#FFF8F0",border:"1px solid #FED7AA",borderRadius:13,padding:13}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#92400E",marginBottom:9}}>✅ 인증완료 · 답변 작성</div>
+                  <textarea style={{...ta,borderColor:"#FED7AA",minHeight:88}} rows={4}
+                    placeholder="답변을 입력하세요…"
+                    value={answerDraft} onChange={e=>setAnswerDraft(e.target.value)} />
+                  <div style={{display:"flex",gap:7,marginTop:8}}>
+                    <button style={{...pb,fontSize:13}} onClick={postAnswer}>답변 등록</button>
+                    <button style={sg} onClick={()=>setAdminOpen(false)}>취소</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 글쓰기 */}
+        {page==="write" && (
+          <div style={{padding:"14px 13px 40px"}}>
+            <div style={{marginBottom:15}}>
+              <label style={{display:"block",fontSize:13,fontWeight:700,color:"#374151",marginBottom:7}}>분류</label>
+              <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                {CATEGORIES.map(c=>(
+                  <button key={c} onClick={()=>setFCat(c)}
+                    style={{border:`1.5px solid ${fCat===c?CS[c].bd:"#E2E8F0"}`,borderRadius:20,
+                      padding:"5px 13px",fontSize:12,fontFamily:"inherit",
+                      background:fCat===c?CS[c].bg:"#fff",color:fCat===c?CS[c].tx:"#64748B",
+                      cursor:"pointer",fontWeight:fCat===c?700:500}}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{marginBottom:13}}>
+              <label style={{display:"block",fontSize:13,fontWeight:700,color:"#374151",marginBottom:7}}>제목</label>
+              <input style={inp} type="text" placeholder="간단하게 제목을 적어주세요" maxLength={50}
+                value={fTitle} onChange={e=>setFTitle(e.target.value)} />
+            </div>
+
+            <div style={{marginBottom:13}}>
+              <label style={{display:"block",fontSize:13,fontWeight:700,color:"#374151",marginBottom:7}}>내용</label>
+              <textarea style={ta} rows={5}
+                placeholder={"문의 내용이나 건의사항을 자유롭게 적어주세요.\n익명으로 접수됩니다."} maxLength={500}
+                value={fBody} onChange={e=>setFBody(e.target.value)} />
+              <div style={{textAlign:"right",fontSize:11,color:"#94A3B8",marginTop:3}}>{fBody.length}/500</div>
+            </div>
+
+            <div style={{background:"#F8FAFC",border:"1px solid #E2E8F0",borderRadius:12,padding:13,marginBottom:15}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                <input type="checkbox" checked={fSecret} onChange={e=>{setFSecret(e.target.checked);setFPin("");}} />
+                🔒 비밀글로 작성
+              </label>
+              <div style={{fontSize:11,color:"#94A3B8",marginTop:5,marginLeft:22}}>
+                목록에는 보이지만 내용은 비밀번호 입력 후 열람
+              </div>
+              {fSecret && (
+                <input style={{...inp,marginTop:9}} type="number" placeholder="숫자 4자리 비밀번호 설정"
+                  value={fPin} onChange={e=>setFPin(e.target.value.slice(0,4))} />
+              )}
+            </div>
+
+            {fErr && <div style={{color:"#DC2626",fontSize:12,marginBottom:10}}>{fErr}</div>}
+
+            <button style={pb} onClick={submitPost}>접수하기</button>
+            <div style={{textAlign:"center",fontSize:11,color:"#94A3B8",marginTop:10}}>
+              ✓ 익명으로 접수됩니다 &nbsp;·&nbsp; ✓ 개인정보 수집 없음
+            </div>
+          </div>
+        )}
+
+        {/* 접수 완료 */}
+        {page==="done" && (
+          <div style={{textAlign:"center",padding:"60px 24px 40px"}}>
+            <div style={{fontSize:52,marginBottom:14}}>🙏</div>
+            <div style={{fontSize:19,fontWeight:700,color:"#1D4ED8",marginBottom:8}}>접수되었습니다</div>
+            <div style={{fontSize:13,color:"#64748B",lineHeight:1.9,marginBottom:30}}>
+              소중한 의견 감사합니다.<br/>
+              빠르게 검토 후 답변드리겠습니다.
+            </div>
+            <button style={pb} onClick={goList}>목록으로 돌아가기</button>
+          </div>
+        )}
+      </div>
+
+      {/* ── PIN 모달 ── */}
+      {pinFor && (
+        <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.55)",
+          display:"flex",alignItems:"center",justifyContent:"center",zIndex:50,padding:24}}>
+          <div style={{background:"#fff",borderRadius:20,padding:"26px 22px",
+            width:"100%",maxWidth:300,textAlign:"center",boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+            <div style={{fontSize:38,marginBottom:8}}>🔒</div>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:5}}>비밀글입니다</div>
+            <div style={{fontSize:12,color:"#64748B",marginBottom:14}}>
+              작성 시 설정한 4자리 비밀번호를 입력하세요
+            </div>
+            <input style={{...inp,textAlign:"center",letterSpacing:8,fontSize:20,fontWeight:700,marginBottom:7}}
+              type="number" placeholder="····" value={pinVal}
+              onChange={e=>{setPinVal(e.target.value.slice(0,4));setPinErr(false);}}
+              onKeyDown={e=>e.key==="Enter"&&checkPin()} autoFocus />
+            {pinErr && <div style={{color:"#DC2626",fontSize:12,marginBottom:6}}>비밀번호가 틀렸습니다</div>}
+            <div style={{display:"flex",gap:7,marginTop:4}}>
+              <button style={{...pb,fontSize:13}} onClick={checkPin}>확인</button>
+              <button style={sg} onClick={()=>setPinFor(null)}>취소</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
