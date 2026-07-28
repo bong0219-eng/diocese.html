@@ -16,6 +16,15 @@
 
   const NATIONAL_TRAIL_CATALOG = [
     {
+      id: 'test-routes',
+      title: '내비게이션 테스트 경로',
+      diocese: '테스트용',
+      icon: '🧪',
+      location: '도원동·회사 근처',
+      description: '실제 순례기록을 저장하지 않고 위치 추적과 GPX 따라가기를 점검하는 짧은 테스트 경로입니다.',
+      hideWebsiteButton: true
+    },
+    {
       id: 'hanti',
       title: '한티가는길',
       diocese: '대구대교구',
@@ -311,9 +320,9 @@
             </span>
           </div>
         </div>
-        <div class="national-trail-foot">
+        ${trail.hideWebsiteButton ? '' : `<div class="national-trail-foot">
           <button type="button" class="national-website-btn" data-url="${escapeHtml(trail.officialUrl || '')}">공식 홈페이지 열기</button>
-        </div>
+        </div>`}
       `;
       card.addEventListener('click', (event) => {
         if (event.target.closest('.national-website-btn')) return;
@@ -371,6 +380,11 @@
 
 
   function buildTrailDetailGroup(trail) {
+    if (trail.id === 'test-routes') {
+      const routes = state.routes.filter((route) => route?.routeGroup === '테스트 경로' || route?.testOnly === true);
+      if (!routes.length) return null;
+      return buildTestRouteGroup(routes, trail);
+    }
     if (trail.id === 'hanti') {
       const route = state.routes.find((item) => item.id === 'hanti' || item.routeGroup === '한티가는길');
       if (!route) return null;
@@ -435,6 +449,31 @@
       items.push({ kind: 'route', route });
     });
     return items;
+  }
+
+  function buildTestRouteGroup(routes, trail = {}) {
+    const ordered = routes.slice().sort((a, b) => {
+      const order = { dowon_test_loop: 1, company_test_route: 2 };
+      return (order[a?.id] || 99) - (order[b?.id] || 99);
+    });
+    return {
+      kind: 'group',
+      id: 'test-route-group',
+      icon: '🧪',
+      title: trail.title || '내비게이션 테스트 경로',
+      detailLines: [
+        '도원동 테스트 GPX와 회사 근처 테스트 GPX를 선택할 수 있습니다.',
+        '실제 순례기록은 저장하지 않고 위치 추적·경로 이탈·복귀 동작을 점검합니다.'
+      ],
+      foot: `${ordered.length}개 테스트 경로`,
+      optionLayout: 'single',
+      options: ordered.map((route) => ({
+        label: route.name || '테스트 경로',
+        title: '',
+        meta: [route.distanceLabel, route.durationLabel].filter(Boolean).join(' · '),
+        route
+      }))
+    };
   }
 
   function buildHantiRouteGroup(route) {
@@ -502,20 +541,33 @@
 
   function buildJeonjuRouteGroup(routes) {
     const orderedRoutes = routes.slice().sort((a, b) => compareByExplicitOrder(JEONJU_ROUTE_ORDER, a, b));
+    const options = [];
+    if (orderedRoutes.length > 1) {
+      options.push({
+        label: '전주교구 순례길 전체코스 보기',
+        title: '요안루갈다길·순교자길·치명자길',
+        meta: '총 71.4km',
+        variant: 'full-route',
+        route: createJeonjuFullRoute(orderedRoutes)
+      });
+    }
+    orderedRoutes.forEach((route, index) => {
+      options.push({
+        label: `${index + 1}. ${route.shortName || route.name}`,
+        title: `${route.startName || '출발지'} ~ ${route.finishName || '도착지'}`,
+        meta: route.distanceLabel || '',
+        route
+      });
+    });
     return {
       kind: 'group',
       id: 'jeonju-pilgrimage-route-group',
       icon: '✝️',
       title: '전주교구 순례길',
-      meta: '걸을 순례길을 선택하세요.',
+      meta: '전체지도 또는 걸을 순례길을 선택하세요.',
       foot: `${orderedRoutes.length}개 순례길`,
       optionLayout: 'single',
-      options: orderedRoutes.map((route, index) => ({
-        label: `${index + 1}. ${route.shortName || route.name}`,
-        title: `${route.startName || '출발지'} ~ ${route.finishName || '도착지'}`,
-        meta: route.distanceLabel || '',
-        route
-      }))
+      options
     };
   }
 
@@ -917,9 +969,10 @@
     const courses = Array.isArray(baseRoute?.courses) ? baseRoute.courses : [];
     if (!courses.length) return { ...baseRoute, preserveSegmentBreaks: true };
 
-    // 한티가는길 전체코스는 각 코스의 마지막 스탬프와 다음 코스의 첫 스탬프
-    // 사이 좌표까지 빠짐없이 분담한다. 스탬프 사이를 단순 잘라내면 코스 끝부분이
-    // 지도에서 끊겨 보이므로, 인접 코스의 경계는 두 스탬프 인덱스의 중간으로 잡는다.
+    // 한티가는길의 코스 경계는 다음 코스 첫 지점과 정확히 일치한다.
+    // 예: 1코스는 1-1에서 시작해 2-1까지이며, 2코스는 같은 2-1에서 시작한다.
+    // 따라서 전체지도 색상도 1-4와 2-1의 중간에서 바뀌면 안 되고,
+    // 반드시 2-1 지점에서 1코스 색 → 2코스 색으로 전환되어야 한다.
     const allPoints = flattenRoutePoints({ ...baseRoute, preserveSegmentBreaks: false })
       .map((point) => ({ lat: Number(point.lat), lng: Number(point.lng) }))
       .filter((point) => isFiniteNumber(point.lat) && isFiniteNumber(point.lng));
@@ -942,7 +995,9 @@
       const nextStart = courseRanges[index + 1].startIndex;
       const safeCurrent = Number.isFinite(currentFinish) ? currentFinish : boundaries[index];
       const safeNext = Number.isFinite(nextStart) ? nextStart : safeCurrent;
-      boundaries.push(Math.max(boundaries[index], Math.round((safeCurrent + safeNext) / 2)));
+      // 공식 코스는 다음 코스의 첫 번호 지점까지 이어진다.
+      // 경계 좌표를 두 지점의 중간값으로 만들지 않고 다음 시작점 자체로 고정한다.
+      boundaries.push(Math.max(boundaries[index], safeNext));
     }
     boundaries.push(allPoints.length - 1);
 
@@ -1046,6 +1101,57 @@
         ...stamp,
         displayOrder: `${routeNo}-${stamp.order || stampIndex + 1}`
       }))
+    };
+  }
+
+  function createJeonjuFullRoute(routes) {
+    const orderedRoutes = routes.slice().sort((a, b) => compareByExplicitOrder(JEONJU_ROUTE_ORDER, a, b));
+    const routeSegments = [];
+    orderedRoutes.forEach((route, routeIndex) => {
+      const displayColor = fullRouteSectionColor(routeIndex);
+      (route.routeSegments || []).forEach((segment, index) => {
+        routeSegments.push({
+          ...segment,
+          id: `jeonju-full-${route.id}-${segment.id || index}`,
+          sourceRouteId: route.id,
+          sourceRouteName: route.shortName || route.name,
+          displayColor,
+          displayWeight: 7 + ((orderedRoutes.length - routeIndex - 1) % 3),
+          points: segment.points || []
+        });
+      });
+    });
+    return {
+      id: 'jeonju-pilgrimage-full',
+      name: '전주교구 순례길 전체코스',
+      shortName: '전주교구 순례길 전체코스',
+      region: '전주교구',
+      type: 'pilgrimage_route',
+      mode: 'route_navigation',
+      lineType: 'gpx',
+      dataQuality: 'actual-gpx',
+      routeGroup: '전주교구 순례길',
+      distanceLabel: '71.4km',
+      startName: '요안루갈다길·순교자길·치명자길',
+      finishName: '전주교구 순례길',
+      preserveSegmentBreaks: true,
+      isOverviewOnly: true,
+      landmarks: dedupeMapPlaces(orderedRoutes.flatMap((route) => route.landmarks || [])),
+      features: {
+        showRouteLine: true,
+        showStampMarkers: true,
+        autoStamp: false,
+        nextStampDistance: false,
+        offRouteAlert: false,
+        nearestStampDistance: false
+      },
+      stamps: orderedRoutes.flatMap((route, routeIndex) => (route.stamps || []).map((stamp, stampIndex) => ({
+        ...stamp,
+        id: `jeonju-full-${route.id}-${stamp.id || stampIndex + 1}`,
+        displayOrder: `${routeIndex + 1}-${stamp.order || stampIndex + 1}`,
+        sourceRouteName: route.shortName || route.name
+      }))),
+      routeSegments
     };
   }
 
@@ -1798,12 +1904,44 @@
     );
   }
 
+  function buildIndividualRouteEndpointStamps(route) {
+    if (!route || isCombinedRoute(route) || route.isOverviewOnly) return [];
+    const points = flattenRoutePoints(route);
+    const startPoint = points[0];
+    const finishPoint = points[points.length - 1];
+    const endpoints = [];
+    if (startPoint && isFiniteNumber(startPoint.lat) && isFiniteNumber(startPoint.lng)) {
+      endpoints.push({
+        id: `endpoint-start-${route.id || 'route'}`,
+        role: 'start',
+        name: route.startName || '출발지',
+        lat: Number(startPoint.lat),
+        lng: Number(startPoint.lng),
+        isRouteEndpoint: true
+      });
+    }
+    if (finishPoint && isFiniteNumber(finishPoint.lat) && isFiniteNumber(finishPoint.lng)) {
+      endpoints.push({
+        id: `endpoint-finish-${route.id || 'route'}`,
+        role: 'finish',
+        name: route.finishName || '도착지',
+        lat: Number(finishPoint.lat),
+        lng: Number(finishPoint.lng),
+        isRouteEndpoint: true
+      });
+    }
+    return endpoints;
+  }
+
   function renderStampMarkers(route) {
     if (!state.map || !window.kakao?.maps) return;
-    if (route?.region === '서울대교구' || route?.region === '전주교구') return;
     const KM = kakao.maps;
     const events = KM.event;
-    (route.stamps || []).forEach((stamp) => {
+    const regularStamps = (route?.region === '서울대교구' || route?.region === '전주교구')
+      ? []
+      : (route.stamps || []);
+    const stampsToRender = [...regularStamps, ...buildIndividualRouteEndpointStamps(route)];
+    stampsToRender.forEach((stamp) => {
       if (!isFiniteNumber(stamp.lat) || !isFiniteNumber(stamp.lng)) return;
       const position = new KM.LatLng(Number(stamp.lat), Number(stamp.lng));
       const markerText = stampMarkerText(stamp);
@@ -1829,8 +1967,9 @@
     state.stampMarkers.forEach((item) => {
       const marker = item.marker || item;
       const stamp = item.stamp || {};
-      const isWonjuEndpoint = state.activeRoute?.region === '원주교구'
-        && (stamp.role === 'start' || stamp.role === 'finish');
+      const isRouteEndpoint = stamp.isRouteEndpoint
+        || stamp.role === 'start'
+        || stamp.role === 'finish';
       // 번호형 지점 마커는 상세 확대에서만 표시한다. 전체 지도에서는 코스명 라벨과
       // 경로선이 우선 보이도록 하고, 원주교구의 출발/도착 표시는 계속 유지한다.
       const isHantiRoute = state.activeRoute?.id === 'hanti'
@@ -1839,17 +1978,15 @@
       // 숫자형 지점 마커는 상세 줌에서만 표시한다.
       // 전체코스를 한 화면에 보는 수준에서는 경로선과 코스명 라벨이 먼저 보이도록 숨긴다.
       // 한티가는길도 다른 순례길과 같은 상세 줌 기준을 사용해 지도 가림을 방지한다.
-      const visible = isWonjuEndpoint || level <= 7;
+      const visible = isRouteEndpoint || level <= 7;
       marker.setMap(visible ? state.map : null);
     });
   }
 
   function stampMarkerText(stamp) {
     if (!stamp) return '';
-    if (state.activeRoute?.region === '원주교구') {
-      if (stamp.role === 'start') return '출발';
-      if (stamp.role === 'finish') return '도착';
-    }
+    if (stamp.role === 'start') return '출발';
+    if (stamp.role === 'finish') return '도착';
     if (stamp.displayOrder) return String(stamp.displayOrder);
     if (typeof stamp.id === 'string' && stamp.id.includes('-')) return stamp.id;
     if (stamp.order) return String(stamp.order);
